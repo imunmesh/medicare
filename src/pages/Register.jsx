@@ -6,13 +6,17 @@ import Button from '../components/Button';
 import useForm from '../hooks/useForm';
 import { useAuth } from '../context/AuthContext';
 
-const Login = () => {
+const Register = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [userType, setUserType] = useState('patient'); // 'patient' or 'doctor'
 
   const validate = (values) => {
     const errors = {};
+    
+    if (!values.name) {
+      errors.name = 'Name is required';
+    }
     
     if (!values.email) {
       errors.email = 'Email is required';
@@ -26,11 +30,27 @@ const Login = () => {
       errors.password = 'Password must be at least 6 characters';
     }
     
+    if (!values.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+    } else if (values.password !== values.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+    
+    if (!values.phone) {
+      errors.phone = 'Phone number is required';
+    } else if (!/^\d{10}$/.test(values.phone)) {
+      errors.phone = 'Phone number must be 10 digits';
+    }
+    
+    if (userType === 'doctor' && !values.specialization) {
+      errors.specialization = 'Specialization is required for doctors';
+    }
+    
     return errors;
   };
 
   const { values, errors, touched, handleChange, handleBlur, validateForm, resetForm } = useForm(
-    { email: '', password: '' },
+    { name: '', email: '', password: '', confirmPassword: '', phone: '', specialization: '' },
     validate
   );
 
@@ -38,20 +58,13 @@ const Login = () => {
     e.preventDefault();
     
     if (validateForm()) {
-      // Simulate login - in real app would make API call
-      // Extract name from email for mock purposes
-      const emailName = values.email.split('@')[0];
-      const formattedName = emailName
-        .split('.')
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
-      
+      // Simulate registration - in real app would make API call
       const userData = {
-        id: 1,
-        name: formattedName || (userType === 'patient' ? 'John Doe' : 'Dr. Sarah Johnson'),
+        id: Date.now(),
+        name: values.name,
         email: values.email,
         role: userType,
-        ...(userType === 'doctor' && { specialization: 'General Physician' })
+        ...(userType === 'doctor' && { specialization: values.specialization })
       };
       
       login(userData);
@@ -75,7 +88,10 @@ const Login = () => {
             {/* User Type Toggle */}
             <div className="flex mb-8 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
               <button
-                onClick={() => setUserType('patient')}
+                onClick={() => {
+                  setUserType('patient');
+                  resetForm();
+                }}
                 className={`flex-1 py-3 px-4 rounded-md font-medium transition-all duration-200 ${
                   userType === 'patient'
                     ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
@@ -85,7 +101,10 @@ const Login = () => {
                 Patient
               </button>
               <button
-                onClick={() => setUserType('doctor')}
+                onClick={() => {
+                  setUserType('doctor');
+                  resetForm();
+                }}
                 className={`flex-1 py-3 px-4 rounded-md font-medium transition-all duration-200 ${
                   userType === 'doctor'
                     ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
@@ -98,14 +117,32 @@ const Login = () => {
 
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                Welcome Back
+                Create Account
               </h2>
               <p className="text-gray-600 dark:text-gray-400">
-                Sign in to your {userType === 'patient' ? 'patient' : 'doctor'} account
+                Register as a {userType === 'patient' ? 'patient' : 'doctor'}
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={values.name}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`input-field ${touched.name && errors.name ? 'input-error' : ''}`}
+                  placeholder="Enter your full name"
+                />
+                {touched.name && errors.name && (
+                  <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Email Address
@@ -142,32 +179,81 @@ const Login = () => {
                 )}
               </div>
 
-              <div className="flex items-center justify-between">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Remember me</span>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Confirm Password
                 </label>
-                <a href="#" className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700">
-                  Forgot password?
-                </a>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={values.confirmPassword}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`input-field ${touched.confirmPassword && errors.confirmPassword ? 'input-error' : ''}`}
+                  placeholder="Confirm your password"
+                />
+                {touched.confirmPassword && errors.confirmPassword && (
+                  <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
+                )}
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={values.phone}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`input-field ${touched.phone && errors.phone ? 'input-error' : ''}`}
+                  placeholder="Enter 10-digit phone number"
+                />
+                {touched.phone && errors.phone && (
+                  <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+                )}
+              </div>
+
+              {userType === 'doctor' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Specialization
+                  </label>
+                  <select
+                    name="specialization"
+                    value={values.specialization}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`input-field ${touched.specialization && errors.specialization ? 'input-error' : ''}`}
+                  >
+                    <option value="">Select specialization</option>
+                    <option value="Cardiologist">Cardiologist</option>
+                    <option value="Neurologist">Neurologist</option>
+                    <option value="Pediatrician">Pediatrician</option>
+                    <option value="Orthopedic Surgeon">Orthopedic Surgeon</option>
+                    <option value="Dermatologist">Dermatologist</option>
+                    <option value="General Physician">General Physician</option>
+                  </select>
+                  {touched.specialization && errors.specialization && (
+                    <p className="text-red-500 text-sm mt-1">{errors.specialization}</p>
+                  )}
+                </div>
+              )}
+
               <Button type="submit" className="w-full">
-                Sign In
+                Create Account
               </Button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-gray-600 dark:text-gray-400">
-                Don't have an account?{' '}
+                Already have an account?{' '}
                 <button
-                  onClick={() => navigate('/register')}
+                  onClick={() => navigate('/login')}
                   className="text-primary-600 dark:text-primary-400 hover:text-primary-700 font-medium"
                 >
-                  Register
+                  Sign In
                 </button>
               </p>
             </div>
@@ -180,4 +266,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;

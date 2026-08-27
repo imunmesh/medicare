@@ -1,60 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import Dropdown from '../components/Dropdown';
-
-// Mock data for doctor appointments
-const mockAppointments = [
-  {
-    id: 1,
-    patientName: 'John Doe',
-    patientEmail: 'john@email.com',
-    date: '2024-08-27',
-    time: '09:00 AM',
-    status: 'confirmed',
-    reason: 'Regular checkup'
-  },
-  {
-    id: 2,
-    patientName: 'Jane Smith',
-    patientEmail: 'jane@email.com',
-    date: '2024-08-27',
-    time: '10:30 AM',
-    status: 'confirmed',
-    reason: 'Follow-up consultation'
-  },
-  {
-    id: 3,
-    patientName: 'Michael Johnson',
-    patientEmail: 'michael@email.com',
-    date: '2024-08-27',
-    time: '02:00 PM',
-    status: 'pending',
-    reason: 'Initial consultation'
-  },
-  {
-    id: 4,
-    patientName: 'Sarah Williams',
-    patientEmail: 'sarah@email.com',
-    date: '2024-08-27',
-    time: '03:30 PM',
-    status: 'confirmed',
-    reason: 'Prescription renewal'
-  },
-  {
-    id: 5,
-    patientName: 'David Brown',
-    patientEmail: 'david@email.com',
-    date: '2024-08-28',
-    time: '11:00 AM',
-    status: 'pending',
-    reason: 'Lab results review'
-  }
-];
+import useFetch from '../hooks/useFetch';
+import axiosInstance from '../api/axiosInstance';
 
 const sortOptions = [
   { value: 'time-asc', label: 'Time (Earliest First)' },
@@ -64,31 +18,16 @@ const sortOptions = [
 
 const DoctorDashboard = () => {
   const navigate = useNavigate();
-  const [appointments, setAppointments] = useState(mockAppointments);
+  const { user } = useAuth();
+  const { data: appointments, loading, error, refetch } = useFetch('/appointments');
   const [sortBy, setSortBy] = useState('time-asc');
   const [isAvailable, setIsAvailable] = useState(true);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
+  const [message, setMessage] = useState({ type: '', text: '' });
 
   const handleSort = (value) => {
     setSortBy(value);
-    let sorted = [...appointments];
-    
-    switch (value) {
-      case 'time-asc':
-        sorted.sort((a, b) => a.time.localeCompare(b.time));
-        break;
-      case 'time-desc':
-        sorted.sort((a, b) => b.time.localeCompare(a.time));
-        break;
-      case 'status':
-        sorted.sort((a, b) => a.status.localeCompare(b.status));
-        break;
-      default:
-        break;
-    }
-    
-    setAppointments(sorted);
   };
 
   const openCancelModal = (appointment) => {
@@ -96,18 +35,36 @@ const DoctorDashboard = () => {
     setCancelModalOpen(true);
   };
 
-  const confirmCancel = () => {
+  const confirmCancel = async () => {
     if (appointmentToCancel) {
-      setAppointments(appointments.filter(apt => apt.id !== appointmentToCancel.id));
-      setCancelModalOpen(false);
-      setAppointmentToCancel(null);
+      try {
+        await axiosInstance.patch(`/appointments/${appointmentToCancel.id}`, { 
+          status: 'cancelled' 
+        });
+        setMessage({ type: 'success', text: 'Appointment cancelled successfully' });
+        refetch();
+        setCancelModalOpen(false);
+        setAppointmentToCancel(null);
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      } catch (err) {
+        setMessage({ type: 'error', text: 'Failed to cancel appointment. Please try again.' });
+        console.error('Cancel error:', err);
+      }
     }
   };
 
-  const confirmAppointment = (appointmentId) => {
-    setAppointments(appointments.map(apt => 
-      apt.id === appointmentId ? { ...apt, status: 'confirmed' } : apt
-    ));
+  const confirmAppointment = async (appointmentId) => {
+    try {
+      await axiosInstance.patch(`/appointments/${appointmentId}`, { 
+        status: 'confirmed' 
+      });
+      setMessage({ type: 'success', text: 'Appointment confirmed successfully' });
+      refetch();
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Failed to confirm appointment. Please try again.' });
+      console.error('Confirm error:', err);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -123,14 +80,25 @@ const DoctorDashboard = () => {
     }
   };
 
-  const todayAppointments = appointments.filter(apt => apt.date === '2024-08-27');
-  const upcomingAppointments = appointments.filter(apt => apt.date !== '2024-08-27');
+  // Sort appointments based on selected option
+  const sortedAppointments = appointments ? [...appointments].sort((a, b) => {
+    switch (sortBy) {
+      case 'time-asc':
+        return a.time.localeCompare(b.time);
+      case 'time-desc':
+        return b.time.localeCompare(a.time);
+      case 'status':
+        return a.status.localeCompare(b.status);
+      default:
+        return 0;
+    }
+  }) : [];
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className="flex-grow bg-gray-50 py-8 px-4">
+      <main className="flex-grow bg-gray-50 dark:bg-gray-900 py-8 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Sidebar - Profile Summary */}
@@ -138,16 +106,18 @@ const DoctorDashboard = () => {
               <Card className="sticky top-24">
                 <div className="text-center">
                   <div className="w-24 h-24 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-3xl font-bold text-white">SJ</span>
+                    <span className="text-3xl font-bold text-white">
+                      {user?.name?.split(' ').map(n => n[0]).join('') || 'SJ'}
+                    </span>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-1">Dr. Sarah Johnson</h3>
-                  <p className="text-primary-600 font-medium mb-1">Cardiologist</p>
-                  <p className="text-gray-600 mb-4">12 years experience</p>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">{user?.name || 'Dr. Sarah Johnson'}</h3>
+                  <p className="text-primary-600 dark:text-primary-400 font-medium mb-1">{user?.specialization || 'Cardiologist'}</p>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">12 years experience</p>
                   
                   {/* Availability Toggle */}
-                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">Availability</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Availability</span>
                       <button
                         onClick={() => setIsAvailable(!isAvailable)}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
@@ -166,18 +136,14 @@ const DoctorDashboard = () => {
                     </span>
                   </div>
 
-                  <div className="border-t border-gray-200 pt-4 mt-4">
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-gray-600">Email</span>
-                      <span className="text-gray-900 font-medium text-sm">sarah@medicare.com</span>
-                    </div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-gray-600">Phone</span>
-                      <span className="text-gray-900 font-medium text-sm">+1 234 567 890</span>
+                      <span className="text-gray-600 dark:text-gray-400">Email</span>
+                      <span className="text-gray-900 dark:text-gray-100 font-medium text-sm">{user?.email || 'sarah@medicare.com'}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Rating</span>
-                      <span className="text-gray-900 font-medium">4.9 ⭐</span>
+                      <span className="text-gray-600 dark:text-gray-400">Total Appointments</span>
+                      <span className="text-gray-900 dark:text-gray-100 font-medium">{sortedAppointments.length}</span>
                     </div>
                   </div>
 
@@ -194,10 +160,21 @@ const DoctorDashboard = () => {
 
             {/* Main Content - Appointments */}
             <div className="lg:col-span-3">
+              {/* Success/Error Message */}
+              {message.text && (
+                <div className={`mb-4 p-4 rounded-lg ${
+                  message.type === 'success' 
+                    ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                    : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                }`}>
+                  {message.text}
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-1">Today's Appointments</h2>
-                  <p className="text-gray-600">
+                  <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">Today's Appointments</h2>
+                  <p className="text-gray-600 dark:text-gray-400">
                     {new Date().toLocaleDateString('en-US', { 
                       weekday: 'long', 
                       year: 'numeric', 
@@ -217,30 +194,53 @@ const DoctorDashboard = () => {
                 </div>
               </div>
 
-              {/* Today's Appointments */}
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Today ({todayAppointments.length})</h3>
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+                  <p className="mt-4 text-gray-600 dark:text-gray-400">Loading appointments...</p>
+                </div>
+              ) : error ? (
+                <Card className="text-center py-12">
+                  <p className="text-red-500 text-lg mb-4">Error loading appointments: {error}</p>
+                  <Button onClick={() => window.location.reload()}>Retry</Button>
+                </Card>
+              ) : (
                 <div className="space-y-4">
-                  {todayAppointments.length === 0 ? (
-                    <Card className="text-center py-8">
-                      <p className="text-gray-600">No appointments scheduled for today.</p>
+                  {sortedAppointments.length === 0 ? (
+                    <Card className="text-center py-12">
+                      <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">No Appointments</h3>
+                      <p className="text-gray-600 dark:text-gray-400">You don't have any scheduled appointments.</p>
                     </Card>
                   ) : (
-                    todayAppointments.map((appointment) => (
+                    sortedAppointments.map((appointment) => (
                       <Card key={appointment.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div className="flex-grow">
                           <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <svg className="w-6 h-6 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                               </svg>
                             </div>
                             <div>
-                              <h4 className="text-lg font-semibold text-gray-900 mb-1">
+                              <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
                                 {appointment.patientName}
                               </h4>
-                              <p className="text-gray-600 text-sm mb-2">{appointment.patientEmail}</p>
-                              <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                              <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{appointment.patientEmail}</p>
+                              <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                <div className="flex items-center gap-1">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  {new Date(appointment.date).toLocaleDateString('en-US', { 
+                                    weekday: 'short', 
+                                    year: 'numeric', 
+                                    month: 'short', 
+                                    day: 'numeric' 
+                                  })}
+                                </div>
                                 <div className="flex items-center gap-1">
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -248,7 +248,7 @@ const DoctorDashboard = () => {
                                   {appointment.time}
                                 </div>
                               </div>
-                              <p className="text-sm text-gray-500 mt-2">
+                              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
                                 Reason: {appointment.reason}
                               </p>
                             </div>
@@ -280,79 +280,6 @@ const DoctorDashboard = () => {
                       </Card>
                     ))
                   )}
-                </div>
-              </div>
-
-              {/* Upcoming Appointments */}
-              {upcomingAppointments.length > 0 && (
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Upcoming ({upcomingAppointments.length})</h3>
-                  <div className="space-y-4">
-                    {upcomingAppointments.map((appointment) => (
-                      <Card key={appointment.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div className="flex-grow">
-                          <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <h4 className="text-lg font-semibold text-gray-900 mb-1">
-                                {appointment.patientName}
-                              </h4>
-                              <p className="text-gray-600 text-sm mb-2">{appointment.patientEmail}</p>
-                              <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                                <div className="flex items-center gap-1">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                  </svg>
-                                  {new Date(appointment.date).toLocaleDateString('en-US', { 
-                                    weekday: 'short', 
-                                    year: 'numeric', 
-                                    month: 'short', 
-                                    day: 'numeric' 
-                                  })}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                  {appointment.time}
-                                </div>
-                              </div>
-                              <p className="text-sm text-gray-500 mt-2">
-                                Reason: {appointment.reason}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(appointment.status)}`}>
-                            {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                          </span>
-                          {appointment.status === 'pending' && (
-                            <Button 
-                              size="sm"
-                              onClick={() => confirmAppointment(appointment.id)}
-                              className="text-sm px-4 py-2"
-                            >
-                              Confirm
-                            </Button>
-                          )}
-                          <Button 
-                            variant="secondary" 
-                            size="sm"
-                            onClick={() => openCancelModal(appointment)}
-                            className="text-sm px-4 py-2"
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>
@@ -388,13 +315,13 @@ const DoctorDashboard = () => {
           <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <p className="text-gray-700 mb-2">
+          <p className="text-gray-700 dark:text-gray-300 mb-2">
             Are you sure you want to cancel the appointment with
           </p>
-          <p className="font-semibold text-gray-900 mb-4">
+          <p className="font-semibold text-gray-900 dark:text-gray-100 mb-4">
             {appointmentToCancel?.patientName}?
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             This action cannot be undone.
           </p>
         </div>

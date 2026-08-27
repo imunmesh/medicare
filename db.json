@@ -1,0 +1,110 @@
+{
+  "doctors": [
+    {
+      "id": "1",
+      "name": "Dr. Sarah Johnson",
+      "specialization": "Cardiologist",
+      "rating": 4.9,
+      "experience": 12,
+      "available": true
+    },
+    {
+      "id": "2",
+      "name": "Dr. Michael Chen",
+      "specialization": "Neurologist",
+      "rating": 4.8,
+      "experience": 15,
+      "available": true
+    },
+    {
+      "id": "3",
+      "name": "Dr. Emily Williams",
+      "specialization": "Pediatrician",
+      "rating": 4.9,
+      "experience": 8,
+      "available": true
+    },
+    {
+      "id": "4",
+      "name": "Dr. James Anderson",
+      "specialization": "Orthopedic Surgeon",
+      "rating": 4.7,
+      "experience": 20,
+      "available": false
+    },
+    {
+      "id": "5",
+      "name": "Dr. Lisa Martinez",
+      "specialization": "Dermatologist",
+      "rating": 4.8,
+      "experience": 10,
+      "available": true
+    },
+    {
+      "id": "6",
+      "name": "Dr. Robert Taylor",
+      "specialization": "General Physician",
+      "rating": 4.6,
+      "experience": 18,
+      "available": true
+    }
+  ],
+  "appointments": [
+    {
+      "id": "1",
+      "patientId": 1,
+      "patientName": "John Doe",
+      "doctorId": 1,
+      "doctorName": "Dr. Sarah Johnson",
+      "date": "2024-08-27",
+      "time": "09:00 AM",
+      "status": "cancelled",
+      "reason": "Regular checkup"
+    },
+    {
+      "id": "2",
+      "patientId": 1,
+      "patientName": "John Doe",
+      "doctorId": 2,
+      "doctorName": "Dr. Michael Chen",
+      "date": "2024-08-27",
+      "time": "10:30 AM",
+      "status": "cancelled",
+      "reason": "Follow-up consultation"
+    },
+    {
+      "id": "3",
+      "patientId": 1,
+      "patientName": "John Doe",
+      "doctorId": 3,
+      "doctorName": "Dr. Emily Williams",
+      "date": "2024-08-27",
+      "time": "02:00 PM",
+      "status": "cancelled",
+      "reason": "Initial consultation"
+    },
+    {
+      "id": "4",
+      "patientId": 1,
+      "patientName": "John Doe",
+      "doctorId": 1,
+      "doctorName": "Dr. Sarah Johnson",
+      "date": "2024-08-27",
+      "time": "03:30 PM",
+      "status": "cancelled",
+      "reason": "Prescription renewal"
+    },
+    {
+      "id": "5",
+      "patientId": 1,
+      "patientName": "John Doe",
+      "doctorId": 2,
+      "doctorName": "Dr. Michael Chen",
+      "date": "2024-08-28",
+      "time": "11:00 AM",
+      "status": "cancelled",
+      "reason": "Lab results review"
+    }
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
+}
