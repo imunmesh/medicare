@@ -6,12 +6,16 @@ import Button from '../components/Button';
 import useForm from '../hooks/useForm';
 import useFetch from '../hooks/useFetch';
 import { useAuth } from '../context/AuthContext';
+import { useAppointments } from '../context/AppointmentContext';
 
 const BookAppointment = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addAppointment } = useAppointments();
   const [searchParams] = useSearchParams();
   const preselectedDoctorId = searchParams.get('doctorId');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   const { data: doctors, loading: doctorsLoading, error: doctorsError } = useFetch('/doctors');
   
@@ -51,7 +55,7 @@ const BookAppointment = () => {
     return errors;
   };
 
-  const { values, errors, touched, handleChange, handleBlur, validateForm, resetForm } = useForm(
+  const { values, errors, touched, handleChange, handleBlur, validateForm } = useForm(
     { 
       doctorId: preselectedDoctorId || '', 
       date: '', 
@@ -65,13 +69,66 @@ const BookAppointment = () => {
     e.preventDefault();
     
     if (validateForm()) {
-      // In a real app, this would make an API call to create the appointment
-      console.log('Booking appointment:', values);
-      
-      // Navigate to patient dashboard
-      navigate('/patient-dashboard');
+      try {
+        setIsSubmitting(true);
+        setSubmitError(null);
+
+        const doctor = doctors?.find((d) => String(d.id) === String(values.doctorId));
+        const newAppointment = {
+          patientId: user.id,
+          patientName: user.name,
+          patientEmail: user.email,
+          doctorId: values.doctorId,
+          doctorName: doctor?.name || 'Doctor',
+          specialization: doctor?.specialization || 'General Physician',
+          date: values.date,
+          time: values.timeSlot,
+          status: 'pending',
+          reason: values.reason,
+        };
+
+        await addAppointment(newAppointment);
+        navigate('/patient-dashboard');
+      } catch (err) {
+        setSubmitError(err.message || 'Failed to book appointment. Please try again.');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
+
+  // If user is not logged in: show clear login screen
+  if (!user || !user.id) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center p-4">
+          <div className="card-base max-w-md w-full text-center p-8 shadow-xl">
+            <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              Please Log In to Book
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
+              You must be logged in to book an appointment with our specialists.
+            </p>
+            <div className="space-y-3">
+              <Button onClick={() => navigate('/login')} className="w-full">
+                Log In as Patient
+              </Button>
+              <Button variant="secondary" onClick={() => navigate('/doctors')} className="w-full">
+                Browse Doctors
+              </Button>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (doctorsLoading) {
     return (
@@ -202,14 +259,21 @@ const BookAppointment = () => {
                 )}
               </div>
 
+              {submitError && (
+                <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm">
+                  {submitError}
+                </div>
+              )}
+
               <div className="flex gap-4">
-                <Button type="submit" className="flex-1">
-                  Book Appointment
+                <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                  {isSubmitting ? 'Booking...' : 'Book Appointment'}
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={() => navigate('/patient-dashboard')}
                   className="flex-1"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </Button>

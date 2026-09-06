@@ -64,9 +64,21 @@ const Register = () => {
         name: values.name,
         email: values.email,
         role: userType,
-        ...(userType === 'doctor' && { specialization: values.specialization })
+        ...(userType === 'doctor' && { specialization: values.specialization }),
       };
-      
+
+      // Save user to registered users database in localStorage so Login can retrieve the exact unique ID
+      try {
+        const storedUsers = JSON.parse(localStorage.getItem('medicare_users') || '[]');
+        const updatedUsers = storedUsers.filter(
+          (u) => u.email.toLowerCase() !== values.email.toLowerCase()
+        );
+        updatedUsers.push(userData);
+        localStorage.setItem('medicare_users', JSON.stringify(updatedUsers));
+      } catch (err) {
+        console.error('Failed to persist user in medicare_users:', err);
+      }
+
       login(userData);
       
       // Navigate to appropriate dashboard

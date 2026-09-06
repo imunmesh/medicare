@@ -2,17 +2,55 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useAppointments } from '../context/AppointmentContext';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, login, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const { getAppointmentsForPatient, getAppointmentsForDoctor } = useAppointments();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
+
+  const handleRoleSwitch = () => {
+    if (user?.role === 'patient') {
+      login({
+        id: 1,
+        name: 'Dr. Sarah Johnson',
+        email: 'sarah@medicare.com',
+        role: 'doctor',
+        specialization: 'Cardiologist',
+      });
+      navigate('/doctor-dashboard');
+    } else {
+      login({
+        id: 1,
+        name: 'John Doe',
+        email: 'john@email.com',
+        role: 'patient',
+      });
+      navigate('/patient-dashboard');
+    }
+  };
+
+  // Compute appointment badge count based on user role
+  let badgeCount = 0;
+  let badgeTitle = '';
+  if (user?.role === 'patient' && user?.id) {
+    const patientAppointments = getAppointmentsForPatient(user.id);
+    const upcoming = patientAppointments.filter((app) => app.status !== 'cancelled');
+    badgeCount = upcoming.length;
+    badgeTitle = `${badgeCount} upcoming appointment${badgeCount === 1 ? '' : 's'}`;
+  } else if (user?.role === 'doctor' && user?.id) {
+    const doctorAppointments = getAppointmentsForDoctor(user.id);
+    const pending = doctorAppointments.filter((app) => app.status === 'pending');
+    badgeCount = pending.length;
+    badgeTitle = `${badgeCount} appointment${badgeCount === 1 ? '' : 's'} pending confirmation`;
+  }
 
   return (
     <nav className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-40 transition-colors duration-200">
@@ -54,10 +92,33 @@ const Navbar = () => {
               <>
                 <Link 
                   to={user.role === 'patient' ? '/patient-dashboard' : '/doctor-dashboard'} 
-                  className="nav-link"
+                  className="nav-link inline-flex items-center gap-2"
                 >
-                  Dashboard
+                  <span>Dashboard</span>
+                  {badgeCount > 0 && (
+                    <span
+                      id="navbar-appointment-badge"
+                      className={`inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full ${
+                        user.role === 'doctor'
+                          ? 'bg-amber-500 text-white animate-pulse'
+                          : 'bg-primary-600 text-white'
+                      }`}
+                      title={badgeTitle}
+                    >
+                      {badgeCount}
+                    </span>
+                  )}
                 </Link>
+
+                {/* Role switcher for quick testing and live lab demonstration */}
+                <button
+                  onClick={handleRoleSwitch}
+                  className="text-xs px-2.5 py-1 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Switch role in-memory without refreshing"
+                >
+                  Switch to {user.role === 'patient' ? 'Doctor' : 'Patient'}
+                </button>
+
                 <button
                   onClick={handleLogout}
                   className="btn-secondary text-sm px-4 py-2"
@@ -125,11 +186,31 @@ const Navbar = () => {
               <>
                 <Link 
                   to={user.role === 'patient' ? '/patient-dashboard' : '/doctor-dashboard'} 
-                  className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-gray-700 hover:text-primary-600 transition-colors duration-200"
+                  className="flex items-center justify-between px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-gray-700 hover:text-primary-600 transition-colors duration-200"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Dashboard
+                  <span>Dashboard</span>
+                  {badgeCount > 0 && (
+                    <span
+                      className={`inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full ${
+                        user.role === 'doctor'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-primary-600 text-white'
+                      }`}
+                    >
+                      {badgeCount}
+                    </span>
+                  )}
                 </Link>
+                <button
+                  onClick={() => {
+                    handleRoleSwitch();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors duration-200 text-sm"
+                >
+                  Switch to {user.role === 'patient' ? 'Doctor View' : 'Patient View'}
+                </button>
                 <button
                   onClick={() => {
                     handleLogout();
@@ -157,3 +238,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+

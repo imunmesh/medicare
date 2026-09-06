@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useAppointments } from '../context/AppointmentContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import Dropdown from '../components/Dropdown';
-import useFetch from '../hooks/useFetch';
-import axiosInstance from '../api/axiosInstance';
 
 const sortOptions = [
   { value: 'date-asc', label: 'Date (Earliest First)' },
@@ -19,7 +18,8 @@ const sortOptions = [
 const PatientDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: appointments, loading, error, refetch } = useFetch('/appointments');
+  const { getAppointmentsForPatient, cancelAppointment, loading, error } = useAppointments();
+  const appointments = user?.id ? getAppointmentsForPatient(user.id) : [];
   const [sortBy, setSortBy] = useState('date-asc');
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
@@ -37,11 +37,8 @@ const PatientDashboard = () => {
   const confirmCancel = async () => {
     if (appointmentToCancel) {
       try {
-        await axiosInstance.patch(`/appointments/${appointmentToCancel.id}`, { 
-          status: 'cancelled' 
-        });
+        await cancelAppointment(appointmentToCancel.id);
         setMessage({ type: 'success', text: 'Appointment cancelled successfully' });
-        refetch();
         setCancelModalOpen(false);
         setAppointmentToCancel(null);
         setTimeout(() => setMessage({ type: '', text: '' }), 3000);
@@ -65,6 +62,72 @@ const PatientDashboard = () => {
     }
   };
 
+  // If user or user.id is missing: show clear "Please log in" state
+  if (!user || !user.id) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center p-4">
+          <Card className="max-w-md w-full text-center p-8 shadow-xl">
+            <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              Authentication Required
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
+              Please log in to your patient account to view your scheduled visits, appointment history, and medical consultations.
+            </p>
+            <div className="space-y-3">
+              <Button onClick={() => navigate('/login')} className="w-full">
+                Log In as Patient
+              </Button>
+              <Button variant="secondary" onClick={() => navigate('/')} className="w-full">
+                Back to Home
+              </Button>
+            </div>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Role validation
+  if (user.role !== 'patient') {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center p-4">
+          <Card className="max-w-md w-full text-center p-8 shadow-xl">
+            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              Patient Portal
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
+              You are signed in as <span className="font-semibold">{user.email}</span> (Role: {user.role}). To manage your clinic schedule, please open the Doctor Dashboard.
+            </p>
+            <div className="space-y-3">
+              <Button onClick={() => navigate('/doctor-dashboard')} className="w-full">
+                Go to Doctor Dashboard
+              </Button>
+              <Button variant="secondary" onClick={() => navigate('/login')} className="w-full">
+                Switch to Patient Account
+              </Button>
+            </div>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   // Sort appointments based on selected option
   const sortedAppointments = appointments ? [...appointments].sort((a, b) => {
     switch (sortBy) {
@@ -79,6 +142,10 @@ const PatientDashboard = () => {
     }
   }) : [];
 
+  const patientInitials = user.name
+    ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)
+    : 'PT';
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -92,16 +159,23 @@ const PatientDashboard = () => {
                 <div className="text-center">
                   <div className="w-24 h-24 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-3xl font-bold text-white">
-                      {user?.name?.split(' ').map(n => n[0]).join('') || 'JD'}
+                      {patientInitials}
                     </span>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">{user?.name || 'John Doe'}</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">Patient</p>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                    {user.name}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-1 text-sm">Patient</p>
+                  <p className="text-gray-500 dark:text-gray-500 mb-4 text-xs">
+                    Patient ID: #{user.id}
+                  </p>
                   
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-gray-600 dark:text-gray-400">Email</span>
-                      <span className="text-gray-900 dark:text-gray-100 font-medium">{user?.email || 'john@email.com'}</span>
+                      <span className="text-gray-900 dark:text-gray-100 font-medium text-sm truncate max-w-[150px]" title={user.email}>
+                        {user.email}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600 dark:text-gray-400">Total Visits</span>
@@ -223,14 +297,16 @@ const PatientDashboard = () => {
                           <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(appointment.status)}`}>
                             {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                           </span>
-                          <Button 
-                            variant="secondary" 
-                            size="sm"
-                            onClick={() => openCancelModal(appointment)}
-                            className="text-sm px-4 py-2"
-                          >
-                            Cancel
-                          </Button>
+                          {appointment.status !== 'cancelled' && (
+                            <Button 
+                              variant="secondary" 
+                              size="sm"
+                              onClick={() => openCancelModal(appointment)}
+                              className="text-sm px-4 py-2"
+                            >
+                              Cancel
+                            </Button>
+                          )}
                         </div>
                       </Card>
                     ))

@@ -22,7 +22,7 @@
       "specialization": "Pediatrician",
       "rating": 4.9,
       "experience": 8,
-      "available": true
+      "available": false
     },
     {
       "id": "4",
@@ -104,6 +104,45 @@
       "time": "11:00 AM",
       "status": "cancelled",
       "reason": "Lab results review"
+    },
+    {
+      "patientId": 1,
+      "patientName": "John Doe",
+      "patientEmail": "john@email.com",
+      "doctorId": "5",
+      "doctorName": "Dr. Lisa Martinez",
+      "specialization": "Dermatologist",
+      "date": "2026-09-25",
+      "time": "03:30 PM",
+      "status": "cancelled",
+      "reason": "fever",
+      "id": "lG0TEgQYGHk"
+    },
+    {
+      "patientId": 1,
+      "patientName": "John Doe",
+      "patientEmail": "john@email.com",
+      "doctorId": "4",
+      "doctorName": "Dr. James Anderson",
+      "specialization": "Orthopedic Surgeon",
+      "date": "2026-09-17",
+      "time": "03:00 PM",
+      "status": "cancelled",
+      "reason": "hi",
+      "id": "5WCwGifDZtc"
+    },
+    {
+      "patientId": 1788697655664,
+      "patientName": "Abhi61",
+      "patientEmail": "abhi61@gmail.com",
+      "doctorId": "1",
+      "doctorName": "Dr. Sarah Johnson",
+      "specialization": "Cardiologist",
+      "date": "2026-09-19",
+      "time": "10:30 AM",
+      "status": "confirmed",
+      "reason": "cold",
+      "id": "FzeuVx2IC8Q"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

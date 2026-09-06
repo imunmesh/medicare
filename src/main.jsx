@@ -4,13 +4,17 @@ import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { AppointmentProvider } from './context/AppointmentContext'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThemeProvider>
       <AuthProvider>
-        <App />
+        <AppointmentProvider>
+          <App />
+        </AppointmentProvider>
       </AuthProvider>
     </ThemeProvider>
   </StrictMode>,
 )
+

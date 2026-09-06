@@ -3,7 +3,16 @@ import { createContext, useContext, useState } from 'react';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // { id, name, email, role: 'patient' | 'doctor' }
+  // Synchronously initialize user state from localStorage to eliminate timing gap on initial render
+  const [user, setUser] = useState(() => {
+    try {
+      const storedUser = localStorage.getItem('user');
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch (err) {
+      console.error('Error reading user from localStorage:', err);
+      return null;
+    }
+  });
 
   const login = (userData) => {
     setUser(userData);
@@ -15,14 +24,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user');
     localStorage.removeItem('authToken');
   };
-
-  // Check for persisted user on mount
-  useState(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  });
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
