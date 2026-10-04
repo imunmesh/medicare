@@ -39,12 +39,12 @@ export const AppointmentProvider = ({ children }) => {
     };
   }, []);
 
-  // Add a new appointment: POST to json-server, then update state locally without full refetch
+  // Add a new appointment: POST to /appointments (Protected)
   const addAppointment = async (newAppointment) => {
     try {
       const response = await axiosInstance.post('/appointments', newAppointment);
       const created = response.data;
-      setAppointments((prev) => [...prev, created]);
+      setAppointments((prev) => [created, ...prev]);
       return created;
     } catch (err) {
       console.error('Error adding appointment:', err);
@@ -52,13 +52,13 @@ export const AppointmentProvider = ({ children }) => {
     }
   };
 
-  // Cancel an appointment: PATCH status to 'cancelled' on json-server, update local state
+  // Cancel an appointment: PATCH status to 'cancelled' (Protected)
   const cancelAppointment = async (id) => {
     try {
       await axiosInstance.patch(`/appointments/${id}`, { status: 'cancelled' });
       setAppointments((prev) =>
         prev.map((item) =>
-          String(item.id) === String(id) ? { ...item, status: 'cancelled' } : item
+          String(item.id || item._id) === String(id) ? { ...item, status: 'cancelled' } : item
         )
       );
     } catch (err) {
@@ -67,13 +67,13 @@ export const AppointmentProvider = ({ children }) => {
     }
   };
 
-  // Confirm an appointment: PATCH status to 'confirmed' on json-server, update local state
+  // Confirm an appointment: PATCH status to 'confirmed' (Protected)
   const confirmAppointment = async (id) => {
     try {
       await axiosInstance.patch(`/appointments/${id}`, { status: 'confirmed' });
       setAppointments((prev) =>
         prev.map((item) =>
-          String(item.id) === String(id) ? { ...item, status: 'confirmed' } : item
+          String(item.id || item._id) === String(id) ? { ...item, status: 'confirmed' } : item
         )
       );
     } catch (err) {

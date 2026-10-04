@@ -1,13 +1,13 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor - add auth token (placeholder for now)
+// Request interceptor - attach JWT auth token to outgoing requests
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
@@ -30,7 +30,7 @@ axiosInstance.interceptors.response.use(
     // Global error logging
     if (error.response) {
       console.error('API Error:', {
-        url: error.config.url,
+        url: error.config?.url,
         status: error.response.status,
         data: error.response.data,
       });

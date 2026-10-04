@@ -37,7 +37,7 @@ const PatientDashboard = () => {
   const confirmCancel = async () => {
     if (appointmentToCancel) {
       try {
-        await cancelAppointment(appointmentToCancel.id);
+        await cancelAppointment(appointmentToCancel.id || appointmentToCancel._id);
         setMessage({ type: 'success', text: 'Appointment cancelled successfully' });
         setCancelModalOpen(false);
         setAppointmentToCancel(null);
@@ -252,7 +252,7 @@ const PatientDashboard = () => {
                     </Card>
                   ) : (
                     sortedAppointments.map((appointment) => (
-                      <Card key={appointment.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <Card key={appointment.id || appointment._id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div className="flex-grow">
                           <div className="flex items-start gap-4">
                             <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center flex-shrink-0">

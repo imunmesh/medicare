@@ -5,47 +5,50 @@ import Footer from '../components/Footer';
 import Button from '../components/Button';
 import useForm from '../hooks/useForm';
 import { useAuth } from '../context/AuthContext';
+import axiosInstance from '../api/axiosInstance';
 
 const Register = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [userType, setUserType] = useState('patient'); // 'patient' or 'doctor'
+  const [regError, setRegError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const validate = (values) => {
     const errors = {};
-    
+
     if (!values.name) {
       errors.name = 'Name is required';
     }
-    
+
     if (!values.email) {
       errors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(values.email)) {
       errors.email = 'Email is invalid';
     }
-    
+
     if (!values.password) {
       errors.password = 'Password is required';
     } else if (values.password.length < 6) {
       errors.password = 'Password must be at least 6 characters';
     }
-    
+
     if (!values.confirmPassword) {
       errors.confirmPassword = 'Please confirm your password';
     } else if (values.password !== values.confirmPassword) {
       errors.confirmPassword = 'Passwords do not match';
     }
-    
+
     if (!values.phone) {
       errors.phone = 'Phone number is required';
     } else if (!/^\d{10}$/.test(values.phone)) {
       errors.phone = 'Phone number must be 10 digits';
     }
-    
+
     if (userType === 'doctor' && !values.specialization) {
       errors.specialization = 'Specialization is required for doctors';
     }
-    
+
     return errors;
   };
 
@@ -54,38 +57,53 @@ const Register = () => {
     validate
   );
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    setRegError('');
+
     if (validateForm()) {
-      // Simulate registration - in real app would make API call
-      const userData = {
-        id: Date.now(),
-        name: values.name,
-        email: values.email,
-        role: userType,
-        ...(userType === 'doctor' && { specialization: values.specialization }),
-      };
-
-      // Save user to registered users database in localStorage so Login can retrieve the exact unique ID
       try {
-        const storedUsers = JSON.parse(localStorage.getItem('medicare_users') || '[]');
-        const updatedUsers = storedUsers.filter(
-          (u) => u.email.toLowerCase() !== values.email.toLowerCase()
-        );
-        updatedUsers.push(userData);
-        localStorage.setItem('medicare_users', JSON.stringify(updatedUsers));
-      } catch (err) {
-        console.error('Failed to persist user in medicare_users:', err);
-      }
+        setLoading(true);
+        const registerEndpoint =
+          userType === 'patient' ? '/auth/patients/register' : '/auth/doctors/register';
 
-      login(userData);
-      
-      // Navigate to appropriate dashboard
-      if (userType === 'patient') {
-        navigate('/patient-dashboard');
-      } else {
-        navigate('/doctor-dashboard');
+        const payload = {
+          name: values.name.trim(),
+          email: values.email.trim(),
+          password: values.password,
+          phone: values.phone.trim(),
+          ...(userType === 'doctor' && { specialization: values.specialization }),
+        };
+
+        // 1. Register with backend
+        await axiosInstance.post(registerEndpoint, payload);
+
+        // 2. Automatically log in to retrieve JWT
+        const loginEndpoint =
+          userType === 'patient' ? '/auth/patients/login' : '/auth/doctors/login';
+        const loginRes = await axiosInstance.post(loginEndpoint, {
+          email: values.email.trim(),
+          password: values.password,
+        });
+
+        const { user, token } = loginRes.data;
+        login(user, token);
+
+        // 3. Navigate to appropriate dashboard
+        if (userType === 'patient') {
+          navigate('/patient-dashboard');
+        } else {
+          navigate('/doctor-dashboard');
+        }
+      } catch (err) {
+        console.error('Registration error:', err);
+        const errorMsg =
+          err.response?.data?.message ||
+          (err.response?.data?.errors && err.response.data.errors[0]?.msg) ||
+          'Registration failed. Please try again.';
+        setRegError(errorMsg);
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -93,15 +111,17 @@ const Register = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      
+
       <main className="flex-grow bg-gradient-to-br from-primary-50 via-white to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-12 px-4">
         <div className="max-w-md mx-auto">
           <div className="card-base">
             {/* User Type Toggle */}
             <div className="flex mb-8 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
               <button
+                type="button"
                 onClick={() => {
                   setUserType('patient');
+                  setRegError('');
                   resetForm();
                 }}
                 className={`flex-1 py-3 px-4 rounded-md font-medium transition-all duration-200 ${
@@ -113,8 +133,10 @@ const Register = () => {
                 Patient
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setUserType('doctor');
+                  setRegError('');
                   resetForm();
                 }}
                 className={`flex-1 py-3 px-4 rounded-md font-medium transition-all duration-200 ${
@@ -135,6 +157,12 @@ const Register = () => {
                 Register as a {userType === 'patient' ? 'patient' : 'doctor'}
               </p>
             </div>
+
+            {regError && (
+              <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg text-sm text-center">
+                {regError}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -184,7 +212,7 @@ const Register = () => {
                   onChange={handleChange}
                   onBlur={handleBlur}
                   className={`input-field ${touched.password && errors.password ? 'input-error' : ''}`}
-                  placeholder="Enter your password"
+                  placeholder="Enter your password (min 6 characters)"
                 />
                 {touched.password && errors.password && (
                   <p className="text-red-500 text-sm mt-1">{errors.password}</p>
@@ -253,8 +281,8 @@ const Register = () => {
                 </div>
               )}
 
-              <Button type="submit" className="w-full">
-                Create Account
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Creating Account...' : 'Create Account'}
               </Button>
             </form>
 

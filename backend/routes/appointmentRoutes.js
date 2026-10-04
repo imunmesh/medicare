@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const Appointment = require("../models/Appointment");
+const { protect } = require("../middleware/authMiddleware");
 
-// CREATE — POST /api/appointments
-router.post("/", async (req, res) => {
+// CREATE — POST /api/appointments (Protected: Requires authentication)
+router.post("/", protect, async (req, res) => {
   try {
     const appointment = await Appointment.create(req.body);
     res.status(201).json(appointment);
@@ -43,8 +44,8 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// UPDATE (full) — PUT /api/appointments/:id
-router.put("/:id", async (req, res) => {
+// UPDATE (full) — PUT /api/appointments/:id (Protected)
+router.put("/:id", protect, async (req, res) => {
   try {
     const appointment = await Appointment.findByIdAndUpdate(
       req.params.id,
@@ -60,9 +61,8 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// UPDATE (partial) — PATCH /api/appointments/:id
-// Needed because the frontend uses axiosInstance.patch() for cancel/confirm
-router.patch("/:id", async (req, res) => {
+// UPDATE (partial) — PATCH /api/appointments/:id (Protected)
+router.patch("/:id", protect, async (req, res) => {
   try {
     const appointment = await Appointment.findByIdAndUpdate(
       req.params.id,
@@ -78,8 +78,8 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// DELETE — DELETE /api/appointments/:id
-router.delete("/:id", async (req, res) => {
+// DELETE — DELETE /api/appointments/:id (Protected)
+router.delete("/:id", protect, async (req, res) => {
   try {
     const appointment = await Appointment.findByIdAndDelete(req.params.id);
     if (!appointment) {

@@ -73,9 +73,9 @@ const BookAppointment = () => {
         setIsSubmitting(true);
         setSubmitError(null);
 
-        const doctor = doctors?.find((d) => String(d.id) === String(values.doctorId));
+        const doctor = doctors?.find((d) => String(d.id || d._id) === String(values.doctorId));
         const newAppointment = {
-          patientId: user.id,
+          patientId: user.id || user._id,
           patientName: user.name,
           patientEmail: user.email,
           doctorId: values.doctorId,
@@ -190,7 +190,7 @@ const BookAppointment = () => {
                 >
                   <option value="">Choose a doctor</option>
                   {doctors?.map((doctor) => (
-                    <option key={doctor.id} value={doctor.id}>
+                    <option key={doctor.id || doctor._id} value={doctor.id || doctor._id}>
                       {doctor.name} - {doctor.specialization}
                     </option>
                   ))}

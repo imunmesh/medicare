@@ -3,7 +3,7 @@ import { createContext, useContext, useState } from 'react';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  // Synchronously initialize user state from localStorage to eliminate timing gap on initial render
+  // Synchronously initialize user state and token from localStorage
   const [user, setUser] = useState(() => {
     try {
       const storedUser = localStorage.getItem('user');
@@ -14,19 +14,28 @@ export const AuthProvider = ({ children }) => {
     }
   });
 
-  const login = (userData) => {
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('authToken') || null;
+  });
+
+  const login = (userData, authToken) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+    if (authToken) {
+      setToken(authToken);
+      localStorage.setItem('authToken', authToken);
+    }
   };
 
   const logout = () => {
     setUser(null);
+    setToken(null);
     localStorage.removeItem('user');
     localStorage.removeItem('authToken');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -39,3 +48,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export default AuthContext;

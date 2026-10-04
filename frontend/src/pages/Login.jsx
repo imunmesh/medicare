@@ -5,40 +5,30 @@ import Footer from '../components/Footer';
 import Button from '../components/Button';
 import useForm from '../hooks/useForm';
 import { useAuth } from '../context/AuthContext';
-
-const PRESET_DOCTORS = [
-  { id: 1, name: 'Dr. Sarah Johnson', email: 'sarah@medicare.com', specialization: 'Cardiologist' },
-  { id: 2, name: 'Dr. Michael Chen', email: 'michael@medicare.com', specialization: 'Neurologist' },
-  { id: 3, name: 'Dr. Emily Williams', email: 'emily@medicare.com', specialization: 'Pediatrician' },
-  { id: 4, name: 'Dr. James Anderson', email: 'james@medicare.com', specialization: 'Orthopedic Surgeon' },
-  { id: 5, name: 'Dr. Lisa Martinez', email: 'lisa@medicare.com', specialization: 'Dermatologist' },
-  { id: 6, name: 'Dr. Robert Taylor', email: 'robert@medicare.com', specialization: 'General Physician' },
-];
-
-const PRESET_PATIENTS = [
-  { id: 1, name: 'John Doe', email: 'john@email.com' },
-];
+import axiosInstance from '../api/axiosInstance';
 
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [userType, setUserType] = useState('patient'); // 'patient' or 'doctor'
+  const [authError, setAuthError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const validate = (values) => {
     const errors = {};
-    
+
     if (!values.email) {
       errors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(values.email)) {
       errors.email = 'Email is invalid';
     }
-    
+
     if (!values.password) {
       errors.password = 'Password is required';
     } else if (values.password.length < 6) {
       errors.password = 'Password must be at least 6 characters';
     }
-    
+
     return errors;
   };
 
@@ -48,6 +38,7 @@ const Login = () => {
   );
 
   const handleQuickFill = (account) => {
+    setAuthError('');
     setUserType(account.role);
     setValues({
       email: account.email,
@@ -55,75 +46,37 @@ const Login = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    setAuthError('');
+
     if (validateForm()) {
-      const normalizedEmail = values.email.trim().toLowerCase();
-      let matchedUser = null;
+      try {
+        setLoading(true);
+        const endpoint = userType === 'patient' ? '/auth/patients/login' : '/auth/doctors/login';
+        const response = await axiosInstance.post(endpoint, {
+          email: values.email.trim(),
+          password: values.password,
+        });
 
-      // 1. Check presets first
-      if (userType === 'doctor') {
-        matchedUser = PRESET_DOCTORS.find(
-          (doc) => doc.email.toLowerCase() === normalizedEmail ||
-                   normalizedEmail.includes(doc.name.toLowerCase().split(' ')[1])
-        );
-      } else {
-        matchedUser = PRESET_PATIENTS.find(
-          (p) => p.email.toLowerCase() === normalizedEmail
-        );
-      }
+        const { user, token } = response.data;
+        login(user, token);
 
-      // 2. Check registered users in localStorage
-      if (!matchedUser) {
-        try {
-          const storedUsers = JSON.parse(localStorage.getItem('medicare_users') || '[]');
-          matchedUser = storedUsers.find(
-            (u) => u.email.toLowerCase() === normalizedEmail && u.role === userType
-          );
-        } catch (err) {
-          console.error('Failed to read medicare_users:', err);
+        // Navigate to appropriate dashboard
+        if (userType === 'patient') {
+          navigate('/patient-dashboard');
+        } else {
+          navigate('/doctor-dashboard');
         }
-      }
-
-      // 3. If still not found, construct a brand new user with a unique, persistent ID
-      if (!matchedUser) {
-        const emailName = normalizedEmail.split('@')[0];
-        const formattedName = emailName
-          .split('.')
-          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(' ');
-
-        matchedUser = {
-          id: Date.now(), // Real, unique numeric ID
-          name: formattedName || (userType === 'patient' ? 'New Patient' : 'Dr. Specialist'),
-          email: values.email,
-          role: userType,
-          ...(userType === 'doctor' && { specialization: 'General Physician' }),
-        };
-
-        // Persist to localStorage so the same email keeps its unique ID
-        try {
-          const storedUsers = JSON.parse(localStorage.getItem('medicare_users') || '[]');
-          storedUsers.push(matchedUser);
-          localStorage.setItem('medicare_users', JSON.stringify(storedUsers));
-        } catch (err) {
-          console.error('Failed to save user in medicare_users:', err);
-        }
-      } else {
-        matchedUser = {
-          ...matchedUser,
-          role: userType,
-        };
-      }
-
-      login(matchedUser);
-      
-      // Navigate to appropriate dashboard
-      if (userType === 'patient') {
-        navigate('/patient-dashboard');
-      } else {
-        navigate('/doctor-dashboard');
+      } catch (err) {
+        console.error('Login error:', err);
+        const errorMsg =
+          err.response?.data?.message ||
+          (err.response?.data?.errors && err.response.data.errors[0]?.msg) ||
+          'Invalid email or password';
+        setAuthError(errorMsg);
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -131,14 +84,18 @@ const Login = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      
+
       <main className="flex-grow bg-gradient-to-br from-primary-50 via-white to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-12 px-4">
         <div className="max-w-md mx-auto">
           <div className="card-base">
             {/* User Type Toggle */}
             <div className="flex mb-8 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
               <button
-                onClick={() => setUserType('patient')}
+                type="button"
+                onClick={() => {
+                  setUserType('patient');
+                  setAuthError('');
+                }}
                 className={`flex-1 py-3 px-4 rounded-md font-medium transition-all duration-200 ${
                   userType === 'patient'
                     ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
@@ -148,7 +105,11 @@ const Login = () => {
                 Patient
               </button>
               <button
-                onClick={() => setUserType('doctor')}
+                type="button"
+                onClick={() => {
+                  setUserType('doctor');
+                  setAuthError('');
+                }}
                 className={`flex-1 py-3 px-4 rounded-md font-medium transition-all duration-200 ${
                   userType === 'doctor'
                     ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
@@ -167,6 +128,12 @@ const Login = () => {
                 Sign in to your {userType === 'patient' ? 'patient' : 'doctor'} account
               </p>
             </div>
+
+            {authError && (
+              <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg text-sm text-center">
+                {authError}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -205,28 +172,15 @@ const Login = () => {
                 )}
               </div>
 
-              <div className="flex items-center justify-between">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Remember me</span>
-                </label>
-                <a href="#" className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700">
-                  Forgot password?
-                </a>
-              </div>
-
-              <Button type="submit" className="w-full">
-                Sign In
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
 
             {/* Quick Demo Logins */}
             <div className="mt-6 pt-5 border-t border-gray-200 dark:border-gray-700">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2.5 text-center">
-                Quick Demo Logins (Unique IDs)
+                Quick Demo Logins (JWT Authenticated)
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <button
@@ -234,23 +188,23 @@ const Login = () => {
                   onClick={() => handleQuickFill({ email: 'sarah@medicare.com', role: 'doctor' })}
                   className="p-2 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-left border border-blue-200 dark:border-blue-800 transition-colors"
                 >
-                  <span className="font-semibold block">Dr. Sarah (ID: 1)</span>
-                  <span className="text-[11px] opacity-80">Cardiologist</span>
+                  <span className="font-semibold block">Dr. Sarah Johnson</span>
+                  <span className="text-[11px] opacity-80">sarah@medicare.com</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickFill({ email: 'michael@medicare.com', role: 'doctor' })}
                   className="p-2 rounded bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-left border border-purple-200 dark:border-purple-800 transition-colors"
                 >
-                  <span className="font-semibold block">Dr. Michael (ID: 2)</span>
-                  <span className="text-[11px] opacity-80">Neurologist</span>
+                  <span className="font-semibold block">Dr. Michael Chen</span>
+                  <span className="text-[11px] opacity-80">michael@medicare.com</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickFill({ email: 'john@email.com', role: 'patient' })}
                   className="p-2 rounded bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-left border border-emerald-200 dark:border-emerald-800 transition-colors sm:col-span-2"
                 >
-                  <span className="font-semibold block">John Doe (Patient ID: 1)</span>
+                  <span className="font-semibold block">John Doe (Patient)</span>
                   <span className="text-[11px] opacity-80">john@email.com</span>
                 </button>
               </div>

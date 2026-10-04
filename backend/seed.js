@@ -1,114 +1,10 @@
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 require("dotenv").config();
 
 const Doctor = require("./models/Doctor");
+const Patient = require("./models/Patient");
 const Appointment = require("./models/Appointment");
-
-// Seed data — doctors from the original db.json, with email addresses for login
-const doctors = [
-  {
-    name: "Dr. Sarah Johnson",
-    email: "sarah@medicare.com",
-    specialization: "Cardiologist",
-    rating: 4.9,
-    experience: 12,
-    available: true,
-  },
-  {
-    name: "Dr. Michael Chen",
-    email: "michael@medicare.com",
-    specialization: "Neurologist",
-    rating: 4.8,
-    experience: 15,
-    available: true,
-  },
-  {
-    name: "Dr. Emily Williams",
-    email: "emily@medicare.com",
-    specialization: "Pediatrician",
-    rating: 4.9,
-    experience: 8,
-    available: false,
-  },
-  {
-    name: "Dr. James Anderson",
-    email: "james@medicare.com",
-    specialization: "Orthopedic Surgeon",
-    rating: 4.7,
-    experience: 20,
-    available: false,
-  },
-  {
-    name: "Dr. Lisa Martinez",
-    email: "lisa@medicare.com",
-    specialization: "Dermatologist",
-    rating: 4.8,
-    experience: 10,
-    available: true,
-  },
-  {
-    name: "Dr. Robert Taylor",
-    email: "robert@medicare.com",
-    specialization: "General Physician",
-    rating: 4.6,
-    experience: 18,
-    available: true,
-  },
-];
-
-// Seed data — sample appointments from db.json
-const appointments = [
-  {
-    patientId: "1",
-    patientName: "John Doe",
-    doctorId: "1",
-    doctorName: "Dr. Sarah Johnson",
-    date: "2024-08-27",
-    time: "09:00 AM",
-    status: "cancelled",
-    reason: "Regular checkup",
-  },
-  {
-    patientId: "1",
-    patientName: "John Doe",
-    doctorId: "2",
-    doctorName: "Dr. Michael Chen",
-    date: "2024-08-27",
-    time: "10:30 AM",
-    status: "cancelled",
-    reason: "Follow-up consultation",
-  },
-  {
-    patientId: "1",
-    patientName: "John Doe",
-    doctorId: "3",
-    doctorName: "Dr. Emily Williams",
-    date: "2024-08-27",
-    time: "02:00 PM",
-    status: "cancelled",
-    reason: "Initial consultation",
-  },
-  {
-    patientId: "1",
-    patientName: "John Doe",
-    doctorId: "1",
-    doctorName: "Dr. Sarah Johnson",
-    date: "2024-08-27",
-    time: "03:30 PM",
-    status: "cancelled",
-    reason: "Prescription renewal",
-  },
-  {
-    patientId: "1",
-    patientName: "John Doe",
-    doctorId: "2",
-    doctorName: "Dr. Michael Chen",
-    date: "2024-08-28",
-    time: "11:00 AM",
-    status: "cancelled",
-    reason: "Lab results review",
-  },
-];
 
 const seedDB = async () => {
   try {
@@ -119,15 +15,151 @@ const seedDB = async () => {
     await Doctor.deleteMany({});
     console.log("Cleared existing doctors");
 
+    await Patient.deleteMany({});
+    console.log("Cleared existing patients");
+
     await Appointment.deleteMany({});
     console.log("Cleared existing appointments");
 
-    // Insert seed data
-    const insertedDoctors = await Doctor.insertMany(doctors);
+    // Hash default password
+    const hashedPassword = await bcrypt.hash("password123", 10);
+
+    // Seed sample Patient
+    const samplePatient = await Patient.create({
+      name: "John Doe",
+      email: "john@email.com",
+      password: hashedPassword,
+      phone: "1234567890",
+      role: "patient",
+    });
+    console.log(`Created sample patient: ${samplePatient.name} (${samplePatient.email}) — ID: ${samplePatient._id}`);
+
+    // Seed doctors
+    const doctorsData = [
+      {
+        name: "Dr. Sarah Johnson",
+        email: "sarah@medicare.com",
+        password: hashedPassword,
+        specialization: "Cardiologist",
+        rating: 4.9,
+        experience: 12,
+        available: true,
+        role: "doctor",
+      },
+      {
+        name: "Dr. Michael Chen",
+        email: "michael@medicare.com",
+        password: hashedPassword,
+        specialization: "Neurologist",
+        rating: 4.8,
+        experience: 15,
+        available: true,
+        role: "doctor",
+      },
+      {
+        name: "Dr. Emily Williams",
+        email: "emily@medicare.com",
+        password: hashedPassword,
+        specialization: "Pediatrician",
+        rating: 4.9,
+        experience: 8,
+        available: false,
+        role: "doctor",
+      },
+      {
+        name: "Dr. James Anderson",
+        email: "james@medicare.com",
+        password: hashedPassword,
+        specialization: "Orthopedic Surgeon",
+        rating: 4.7,
+        experience: 20,
+        available: false,
+        role: "doctor",
+      },
+      {
+        name: "Dr. Lisa Martinez",
+        email: "lisa@medicare.com",
+        password: hashedPassword,
+        specialization: "Dermatologist",
+        rating: 4.8,
+        experience: 10,
+        available: true,
+        role: "doctor",
+      },
+      {
+        name: "Dr. Robert Taylor",
+        email: "robert@medicare.com",
+        password: hashedPassword,
+        specialization: "General Physician",
+        rating: 4.6,
+        experience: 18,
+        available: true,
+        role: "doctor",
+      },
+    ];
+
+    const insertedDoctors = await Doctor.insertMany(doctorsData);
     console.log(`Inserted ${insertedDoctors.length} doctors`);
 
-    const insertedAppointments = await Appointment.insertMany(appointments);
+    // Create appointments mapped to the created patient and doctors
+    const appointmentsData = [
+      {
+        patientId: samplePatient._id.toString(),
+        patientName: samplePatient.name,
+        doctorId: insertedDoctors[0]._id.toString(),
+        doctorName: insertedDoctors[0].name,
+        date: "2024-08-27",
+        time: "09:00 AM",
+        status: "confirmed",
+        reason: "Regular checkup",
+      },
+      {
+        patientId: samplePatient._id.toString(),
+        patientName: samplePatient.name,
+        doctorId: insertedDoctors[1]._id.toString(),
+        doctorName: insertedDoctors[1].name,
+        date: "2024-08-27",
+        time: "10:30 AM",
+        status: "pending",
+        reason: "Follow-up consultation",
+      },
+      {
+        patientId: samplePatient._id.toString(),
+        patientName: samplePatient.name,
+        doctorId: insertedDoctors[2]._id.toString(),
+        doctorName: insertedDoctors[2].name,
+        date: "2024-08-27",
+        time: "02:00 PM",
+        status: "cancelled",
+        reason: "Initial consultation",
+      },
+      {
+        patientId: samplePatient._id.toString(),
+        patientName: samplePatient.name,
+        doctorId: insertedDoctors[0]._id.toString(),
+        doctorName: insertedDoctors[0].name,
+        date: "2024-08-27",
+        time: "03:30 PM",
+        status: "confirmed",
+        reason: "Prescription renewal",
+      },
+      {
+        patientId: samplePatient._id.toString(),
+        patientName: samplePatient.name,
+        doctorId: insertedDoctors[1]._id.toString(),
+        doctorName: insertedDoctors[1].name,
+        date: "2024-08-28",
+        time: "11:00 AM",
+        status: "pending",
+        reason: "Lab results review",
+      },
+    ];
+
+    const insertedAppointments = await Appointment.insertMany(appointmentsData);
     console.log(`Inserted ${insertedAppointments.length} appointments`);
+
+    console.log("\n--- Seeded Patient ---");
+    console.log(`  ${samplePatient.name} (${samplePatient.email}) — ID: ${samplePatient._id}`);
 
     console.log("\n--- Seeded Doctors ---");
     insertedDoctors.forEach((doc) => {
