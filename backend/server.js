@@ -8,6 +8,7 @@ require("dotenv").config();
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const doctorRoutes = require("./routes/doctorRoutes");
 const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const app = express();
 
@@ -35,6 +36,7 @@ mongoose
 // Routes
 app.get("/", (req, res) => res.send("MediCare API is Running"));
 app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/doctors", doctorRoutes);
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
@@ -9,10 +9,19 @@ import axiosInstance from '../api/axiosInstance';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const [userType, setUserType] = useState('patient'); // 'patient' or 'doctor'
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const msg = searchParams.get('message');
+    if (msg) {
+      setAuthError(msg);
+    }
+  }, [location.search]);
 
   const validate = (values) => {
     const errors = {};
@@ -62,11 +71,12 @@ const Login = () => {
         const { user, token } = response.data;
         login(user, token);
 
-        // Navigate to appropriate dashboard
-        if (userType === 'patient') {
-          navigate('/patient-dashboard');
-        } else {
+        // Redirect by role: patient -> /patient-dashboard, doctor -> /doctor-dashboard
+        const targetRole = user?.role || userType;
+        if (targetRole === 'doctor') {
           navigate('/doctor-dashboard');
+        } else {
+          navigate('/patient-dashboard');
         }
       } catch (err) {
         console.error('Login error:', err);

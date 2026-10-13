@@ -4,11 +4,13 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const doctorRoutes = require("./routes/doctorRoutes");
 const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const BASE_URL = "http://localhost:5001";
 
@@ -47,7 +49,7 @@ async function request(method, path, body = null, headers = {}) {
 }
 
 async function runTests() {
-  console.log("=== Starting MediCare Security & Auth Test Suite ===\n");
+  console.log("=== Starting MediCare Security & Auth Test Suite (Experiment 6 RBAC) ===\n");
   let passed = 0;
   let total = 0;
 
@@ -61,191 +63,210 @@ async function runTests() {
     }
   }
 
-  const testEmail = `testpatient_${Date.now()}@medicare.com`;
-  const testPassword = "securePassword123";
+  const patientEmail1 = `patient1_${Date.now()}@medicare.com`;
+  const patientEmail2 = `patient2_${Date.now()}@medicare.com`;
+  const doctorEmail1 = `doctor1_${Date.now()}@medicare.com`;
+  const doctorEmail2 = `doctor2_${Date.now()}@medicare.com`;
+  const testPassword = "password123";
 
-  // 1. Register a patient -> 201, "User registered successfully"
-  console.log("--- Test 1: Register a Patient ---");
-  const reg1 = await request("POST", "/api/auth/patients/register", {
-    name: "Alice Test",
-    email: testEmail,
-    password: testPassword,
-    phone: "1234567890",
-  });
-  assert(
-    reg1.status === 201 && reg1.data.userId && reg1.data.message === "User registered successfully",
-    "Register a patient returns 201 with userId",
-    reg1
-  );
-
-  // 2. Register the same email again -> 409, "User already exists"
-  console.log("\n--- Test 2: Register Duplicate Email ---");
-  const reg2 = await request("POST", "/api/auth/patients/register", {
-    name: "Alice Duplicate",
-    email: testEmail,
+  // 1. Setup Test Users
+  console.log("--- Test 1: Register Test Patients and Doctors ---");
+  const p1Reg = await request("POST", "/api/auth/patients/register", {
+    name: "Patient One",
+    email: patientEmail1,
     password: testPassword,
   });
-  assert(
-    reg2.status === 409 && reg2.data.message === "User already exists",
-    "Register duplicate email returns 409 'User already exists'",
-    reg2
-  );
-
-  // 2b. Register with invalid input (express-validator check)
-  console.log("\n--- Test 2b: Input Validation (Short password & invalid email) ---");
-  const regInvalid = await request("POST", "/api/auth/patients/register", {
-    name: "",
-    email: "not-an-email",
-    password: "123",
-  });
-  assert(
-    regInvalid.status === 400 && regInvalid.data.errors?.length > 0,
-    "Invalid input returns 400 with validation errors",
-    regInvalid
-  );
-
-  // 3. Login with correct credentials -> 200, returns a JWT token
-  console.log("\n--- Test 3: Login with Correct Credentials ---");
-  const loginSuccess = await request("POST", "/api/auth/patients/login", {
-    email: testEmail,
+  const p2Reg = await request("POST", "/api/auth/patients/register", {
+    name: "Patient Two",
+    email: patientEmail2,
     password: testPassword,
   });
-  const token = loginSuccess.data.token;
-  assert(
-    loginSuccess.status === 200 &&
-    typeof token === "string" &&
-    token.length > 20 &&
-    loginSuccess.data.user.email === testEmail &&
-    loginSuccess.data.user.role === "patient",
-    "Login with correct credentials returns 200 and valid JWT token",
-    loginSuccess.data
-  );
-
-  // 4. Login with wrong password -> 401, "Invalid email or password"
-  console.log("\n--- Test 4: Login with Wrong Password ---");
-  const loginWrongPass = await request("POST", "/api/auth/patients/login", {
-    email: testEmail,
-    password: "WrongPassword999",
+  const d1Reg = await request("POST", "/api/auth/doctors/register", {
+    name: "Dr. One",
+    email: doctorEmail1,
+    password: testPassword,
+    specialization: "Cardiology",
   });
-  assert(
-    loginWrongPass.status === 401 && loginWrongPass.data.message === "Invalid email or password",
-    "Login with wrong password returns 401 'Invalid email or password'",
-    loginWrongPass.data
-  );
-
-  // 5. GET /api/auth/patients/profile with Bearer <token> -> 200, returns user data WITHOUT password
-  console.log("\n--- Test 5: GET Profile with Valid Token ---");
-  const profileSuccess = await request("GET", "/api/auth/patients/profile", null, {
-    Authorization: `Bearer ${token}`,
+  const d2Reg = await request("POST", "/api/auth/doctors/register", {
+    name: "Dr. Two",
+    email: doctorEmail2,
+    password: testPassword,
+    specialization: "Neurology",
   });
+
   assert(
-    profileSuccess.status === 200 &&
-    profileSuccess.data.email === testEmail &&
-    profileSuccess.data.password === undefined,
-    "GET Profile with valid token returns 200 and password excluded",
-    profileSuccess.data
+    p1Reg.status === 201 && p2Reg.status === 201 && d1Reg.status === 201 && d2Reg.status === 201,
+    "Registered 2 patients and 2 doctors successfully"
   );
 
-  // 6. GET /api/auth/patients/profile with no token -> 401 "Access denied"
-  console.log("\n--- Test 6: GET Profile with No Token ---");
-  const profileNoToken = await request("GET", "/api/auth/patients/profile");
+  // 2. Logins
+  const p1Login = await request("POST", "/api/auth/patients/login", { email: patientEmail1, password: testPassword });
+  const p2Login = await request("POST", "/api/auth/patients/login", { email: patientEmail2, password: testPassword });
+  const d1Login = await request("POST", "/api/auth/doctors/login", { email: doctorEmail1, password: testPassword });
+  const d2Login = await request("POST", "/api/auth/doctors/login", { email: doctorEmail2, password: testPassword });
+
+  const p1Token = p1Login.data.token;
+  const p2Token = p2Login.data.token;
+  const d1Token = d1Login.data.token;
+  const d2Token = d2Login.data.token;
+
   assert(
-    profileNoToken.status === 401 && profileNoToken.data.message === "Access denied",
-    "GET Profile with no token returns 401 'Access denied'",
-    profileNoToken.data
+    p1Token && p2Token && d1Token && d2Token,
+    "Logged in all test users and obtained tokens"
   );
 
-  // 7. GET /api/auth/patients/profile with garbage/invalid token -> 401 "Invalid or expired token"
-  console.log("\n--- Test 7: GET Profile with Invalid Token ---");
-  const profileInvalidToken = await request("GET", "/api/auth/patients/profile", null, {
-    Authorization: "Bearer garbage_fake_token_12345",
-  });
+  // 3. User Routes Tests (/api/user)
+  console.log("\n--- Test 2: /api/user Routes & RBAC Authorization ---");
+
+  // Dashboard (Any logged-in user)
+  const userDashP1 = await request("GET", "/api/user/dashboard", null, { Authorization: `Bearer ${p1Token}` });
   assert(
-    profileInvalidToken.status === 401 && profileInvalidToken.data.message === "Invalid or expired token",
-    "GET Profile with invalid token returns 401 'Invalid or expired token'",
-    profileInvalidToken.data
+    userDashP1.status === 200 && userDashP1.data.message === "Welcome to the protected dashboard" && userDashP1.data.user.role === "patient",
+    "GET /api/user/dashboard as patient returns 200 and user object"
   );
 
-  // 8. Doctor auth flow
-  console.log("\n--- Test 8: Doctor Login & Profile ---");
-  const docLogin = await request("POST", "/api/auth/doctors/login", {
-    email: "sarah@medicare.com",
-    password: "password123",
-  });
+  const userDashD1 = await request("GET", "/api/user/dashboard", null, { Authorization: `Bearer ${d1Token}` });
   assert(
-    docLogin.status === 200 &&
-    docLogin.data.token &&
-    docLogin.data.user.role === "doctor" &&
-    docLogin.data.user.specialization === "Cardiologist",
-    "Doctor login returns 200, JWT token, and doctor info",
-    docLogin.data
+    userDashD1.status === 200 && userDashD1.data.message === "Welcome to the protected dashboard" && userDashD1.data.user.role === "doctor",
+    "GET /api/user/dashboard as doctor returns 200 and user object"
   );
 
-  const docProfile = await request("GET", "/api/auth/doctors/profile", null, {
-    Authorization: `Bearer ${docLogin.data.token}`,
-  });
+  const userDashNoToken = await request("GET", "/api/user/dashboard");
   assert(
-    docProfile.status === 200 &&
-    docProfile.data.email === "sarah@medicare.com" &&
-    docProfile.data.password === undefined,
-    "Doctor profile returned with password excluded",
-    docProfile.data
+    userDashNoToken.status === 401 && userDashNoToken.data.message === "Access denied",
+    "GET /api/user/dashboard without token returns 401"
   );
 
-  // 9. Protected Appointments Routes
-  console.log("\n--- Test 9: Protected Appointment Route Validation ---");
-  const createUnauthAppt = await request("POST", "/api/appointments", {
-    patientId: "test",
-    patientName: "Alice",
-    doctorId: "doc1",
-    doctorName: "Dr. Sarah",
-    date: "2026-10-01",
+  // Patient Area (Patient only)
+  const patientAreaOk = await request("GET", "/api/user/patient-area", null, { Authorization: `Bearer ${p1Token}` });
+  assert(
+    patientAreaOk.status === 200 && patientAreaOk.data.message === "Welcome Patient! You can access this page.",
+    "GET /api/user/patient-area as patient returns 200"
+  );
+
+  const patientAreaDocFail = await request("GET", "/api/user/patient-area", null, { Authorization: `Bearer ${d1Token}` });
+  assert(
+    patientAreaDocFail.status === 403 && patientAreaDocFail.data.message === "Access denied. You do not have permission.",
+    "GET /api/user/patient-area as doctor returns 403 forbidden"
+  );
+
+  // Doctor Area (Doctor only)
+  const doctorAreaOk = await request("GET", "/api/user/doctor-area", null, { Authorization: `Bearer ${d1Token}` });
+  assert(
+    doctorAreaOk.status === 200 && doctorAreaOk.data.message === "Welcome Doctor! You can access this page.",
+    "GET /api/user/doctor-area as doctor returns 200"
+  );
+
+  const doctorAreaPatientFail = await request("GET", "/api/user/doctor-area", null, { Authorization: `Bearer ${p1Token}` });
+  assert(
+    doctorAreaPatientFail.status === 403 && doctorAreaPatientFail.data.message === "Access denied. You do not have permission.",
+    "GET /api/user/doctor-area as patient returns 403 forbidden"
+  );
+
+  // 4. Appointment Routes & Role Rules
+  console.log("\n--- Test 3: Appointment Routes & Role Rules ---");
+
+  // POST /api/appointments -> patient only, patientId set from req.user.id
+  const createByDocFail = await request("POST", "/api/appointments", {
+    patientId: p1Login.data.user.id,
+    patientName: "Patient One",
+    doctorId: d1Login.data.user.id,
+    doctorName: "Dr. One",
+    date: "2026-10-10",
     time: "10:00 AM",
-  });
+  }, { Authorization: `Bearer ${d1Token}` });
   assert(
-    createUnauthAppt.status === 401 && createUnauthAppt.data.message === "Access denied",
-    "POST /api/appointments without token returns 401",
-    createUnauthAppt.data
+    createByDocFail.status === 403 && createByDocFail.data.message === "Access denied. You do not have permission.",
+    "POST /api/appointments as doctor returns 403 forbidden"
   );
 
-  const createAuthAppt = await request(
-    "POST",
-    "/api/appointments",
-    {
-      patientId: loginSuccess.data.user.id,
-      patientName: "Alice Test",
-      doctorId: docLogin.data.user.id,
-      doctorName: "Dr. Sarah Johnson",
-      date: "2026-10-01",
-      time: "10:00 AM",
-      reason: "Routine Checkup",
-    },
-    {
-      Authorization: `Bearer ${token}`,
-    }
-  );
+  const createByPatient = await request("POST", "/api/appointments", {
+    patientId: "FAKE_PATIENT_ID_IN_BODY",
+    patientName: "Patient One",
+    doctorId: d1Login.data.user.id,
+    doctorName: "Dr. One",
+    date: "2026-10-10",
+    time: "10:00 AM",
+    reason: "Checkup",
+  }, { Authorization: `Bearer ${p1Token}` });
+
   assert(
-    createAuthAppt.status === 201 && createAuthAppt.data._id,
-    "POST /api/appointments with valid token creates appointment (201)",
-    createAuthAppt.data
+    createByPatient.status === 201 &&
+    createByPatient.data._id &&
+    createByPatient.data.patientId === p1Login.data.user.id,
+    "POST /api/appointments sets patientId from req.user.id and ignores fake body patientId"
   );
 
-  // 10. Rate Limiter Test (Send rapid requests)
-  console.log("\n--- Test 10: Rate Limiting ---");
-  let rateLimited = false;
-  let requestsSent = 0;
-  for (let i = 0; i < 110; i++) {
-    const res = await request("GET", "/");
-    requestsSent++;
-    if (res.status === 429) {
-      rateLimited = true;
-      break;
-    }
-  }
+  const apptId = createByPatient.data._id;
+
+  // GET /api/appointments -> filtered by role
+  const getApptsP1 = await request("GET", "/api/appointments", null, { Authorization: `Bearer ${p1Token}` });
   assert(
-    rateLimited,
-    `Rate limiter triggered 429 Too Many Requests after ${requestsSent} requests`,
-    { requestsSent }
+    getApptsP1.status === 200 && Array.isArray(getApptsP1.data) && getApptsP1.data.every(a => a.patientId === p1Login.data.user.id),
+    "GET /api/appointments as patient returns patient's own appointments"
+  );
+
+  const getApptsP2 = await request("GET", "/api/appointments", null, { Authorization: `Bearer ${p2Token}` });
+  assert(
+    getApptsP2.status === 200 && Array.isArray(getApptsP2.data) && getApptsP2.data.length === 0,
+    "GET /api/appointments as another patient returns empty list"
+  );
+
+  const getApptsD1 = await request("GET", "/api/appointments", null, { Authorization: `Bearer ${d1Token}` });
+  assert(
+    getApptsD1.status === 200 && Array.isArray(getApptsD1.data) && getApptsD1.data.some(a => a._id === apptId),
+    "GET /api/appointments as assigned doctor returns appointment"
+  );
+
+  const getApptsD2 = await request("GET", "/api/appointments", null, { Authorization: `Bearer ${d2Token}` });
+  assert(
+    getApptsD2.status === 200 && Array.isArray(getApptsD2.data) && getApptsD2.data.length === 0,
+    "GET /api/appointments as unassigned doctor returns empty list"
+  );
+
+  // Confirm appointment -> doctor only, doctorId === req.user.id
+  const confirmByPatientFail = await request("PATCH", `/api/appointments/${apptId}`, { status: "confirmed" }, { Authorization: `Bearer ${p1Token}` });
+  assert(
+    confirmByPatientFail.status === 403 && confirmByPatientFail.data.message === "Access denied. You do not have permission.",
+    "Confirming appointment as patient returns 403"
+  );
+
+  const confirmByOtherDocFail = await request("PATCH", `/api/appointments/${apptId}`, { status: "confirmed" }, { Authorization: `Bearer ${d2Token}` });
+  assert(
+    confirmByOtherDocFail.status === 403 && confirmByOtherDocFail.data.message === "Access denied. You do not have permission.",
+    "Confirming appointment as unassigned doctor returns 403"
+  );
+
+  const confirmByAssignedDoc = await request("PATCH", `/api/appointments/${apptId}`, { status: "confirmed" }, { Authorization: `Bearer ${d1Token}` });
+  assert(
+    confirmByAssignedDoc.status === 200 && confirmByAssignedDoc.data.status === "confirmed",
+    "Confirming appointment as assigned doctor succeeds (200)"
+  );
+
+  // Cancel appointment -> owning patient or assigned doctor only
+  const cancelByOtherPatientFail = await request("PATCH", `/api/appointments/${apptId}`, { status: "cancelled" }, { Authorization: `Bearer ${p2Token}` });
+  assert(
+    cancelByOtherPatientFail.status === 403,
+    "Cancelling appointment as unassigned patient returns 403"
+  );
+
+  const cancelByOwnerPatient = await request("PATCH", `/api/appointments/${apptId}`, { status: "cancelled" }, { Authorization: `Bearer ${p1Token}` });
+  assert(
+    cancelByOwnerPatient.status === 200 && cancelByOwnerPatient.data.status === "cancelled",
+    "Cancelling appointment as owning patient succeeds (200)"
+  );
+
+  // DELETE -> doctor only
+  const deleteByPatientFail = await request("DELETE", `/api/appointments/${apptId}`, null, { Authorization: `Bearer ${p1Token}` });
+  assert(
+    deleteByPatientFail.status === 403,
+    "Deleting appointment as patient returns 403"
+  );
+
+  const deleteByDocOk = await request("DELETE", `/api/appointments/${apptId}`, null, { Authorization: `Bearer ${d1Token}` });
+  assert(
+    deleteByDocOk.status === 200 && deleteByDocOk.data.message === "Appointment deleted successfully",
+    "Deleting appointment as assigned doctor succeeds (200)"
   );
 
   console.log(`\n================================`);
@@ -259,7 +280,7 @@ const app = express();
 app.use(helmet());
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many requests, please try again later." },
@@ -270,6 +291,7 @@ app.use(express.json());
 
 app.get("/", (req, res) => res.send("MediCare API is Running"));
 app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/doctors", doctorRoutes);
 

@@ -21,12 +21,26 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Response interceptor - handle global errors
+// Response interceptor - handle global errors including 401 token expiration
 axiosInstance.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      
+      // Notify AuthContext listener to reset state
+      window.dispatchEvent(new CustomEvent('auth:expired'));
+
+      // Redirect to login with session expired message if not already on /login
+      if (!window.location.pathname.startsWith('/login')) {
+        const expiredMsg = encodeURIComponent('Session expired, please log in again');
+        window.location.href = `/login?message=${expiredMsg}`;
+      }
+    }
+
     // Global error logging
     if (error.response) {
       console.error('API Error:', {

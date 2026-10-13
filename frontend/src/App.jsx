@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import BookAppointment from './pages/BookAppointment';
 import PatientDashboard from './pages/PatientDashboard';
 import DoctorDashboard from './pages/DoctorDashboard';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -15,9 +16,34 @@ function App() {
         <Route path="/doctors" element={<Doctors />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/book-appointment" element={<BookAppointment />} />
-        <Route path="/patient-dashboard" element={<PatientDashboard />} />
-        <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
+
+        {/* Protected Patient Routes */}
+        <Route
+          path="/book-appointment"
+          element={
+            <ProtectedRoute allowedRoles={['patient']}>
+              <BookAppointment />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/patient-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['patient']}>
+              <PatientDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected Doctor Routes */}
+        <Route
+          path="/doctor-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['doctor']}>
+              <DoctorDashboard />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </Router>
   );

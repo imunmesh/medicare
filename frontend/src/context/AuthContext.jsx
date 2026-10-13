@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
@@ -17,6 +17,18 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => {
     return localStorage.getItem('authToken') || null;
   });
+
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setUser(null);
+      setToken(null);
+    };
+
+    window.addEventListener('auth:expired', handleAuthExpired);
+    return () => {
+      window.removeEventListener('auth:expired', handleAuthExpired);
+    };
+  }, []);
 
   const login = (userData, authToken) => {
     setUser(userData);
