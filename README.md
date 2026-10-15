@@ -39,3 +39,32 @@ cd frontend
 npm install
 npm run dev
 ```
+
+## Run with Docker
+
+To run both backend and frontend inside containers using Docker Compose:
+
+1. **Build and start the containers in detached mode**:
+   ```bash
+   docker compose up --build -d
+   ```
+
+2. **Verify containers are running**:
+   ```bash
+   docker compose ps
+   ```
+
+3. **View live logs**:
+   ```bash
+   docker compose logs -f
+   ```
+
+4. **Access the applications**:
+   - Frontend Application: [http://localhost:3000](http://localhost:3000)
+   - Backend Test Endpoint: [http://localhost:5000/api](http://localhost:5000/api)
+
+5. **Stop the containers**:
+   ```bash
+   docker compose down
+   ```
+
