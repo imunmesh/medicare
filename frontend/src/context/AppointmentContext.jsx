@@ -1,16 +1,25 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import axiosInstance from '../api/axiosInstance';
+import { useAuth } from './AuthContext';
 
 const AppointmentContext = createContext(null);
 
 export const AppointmentProvider = ({ children }) => {
+  const { token } = useAuth();
   const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch appointments once on mount
+  // Fetch appointments only when authenticated
   useEffect(() => {
     let isMounted = true;
+
+    if (!token) {
+      setAppointments([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
 
     const fetchAppointments = async () => {
       try {
@@ -37,7 +46,7 @@ export const AppointmentProvider = ({ children }) => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [token]);
 
   // Add a new appointment: POST to /appointments (Protected)
   const addAppointment = async (newAppointment) => {
