@@ -4,18 +4,19 @@
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Socket.IO](https://img.shields.io/badge/Socket.IO-4.8-010101?logo=socket.io&logoColor=white)](https://socket.io/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![JWT](https://img.shields.io/badge/Auth-JWT%20%26%20Bcrypt-000000?logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
 
-A full-stack, enterprise-grade healthcare and doctor appointment management platform built with modern web technologies. The project has progressed through 7 incremental engineering experiments—from foundational UI and state architecture to secure RESTful microservices, Role-Based Access Control (RBAC), and containerized multi-service deployment.
+A full-stack, enterprise-grade healthcare and doctor appointment management platform built with modern web technologies. The project has progressed through 8 incremental engineering experiments—from foundational UI and state architecture to secure RESTful microservices, Role-Based Access Control (RBAC), multi-container Dockerization, and real-time WebSockets with Socket.IO.
 
 ---
 
 ## 📑 Table of Contents
 
 - [Project Overview](#-project-overview)
-- [Comprehensive Experiments Roadmap (Exp 1 - 7)](#-comprehensive-experiments-roadmap-exp-1---7)
+- [Comprehensive Experiments Roadmap (Exp 1 - 8)](#-comprehensive-experiments-roadmap-exp-1---8)
   - [Experiment 1: Frontend Initialization & UI Component Architecture](#experiment-1-frontend-initialization--ui-component-architecture)
   - [Experiment 2: React Hooks, Dynamic State & Mock REST API](#experiment-2-react-hooks-dynamic-state--mock-rest-api)
   - [Experiment 3: Centralized State Management (Context API) & Client CRUD](#experiment-3-centralized-state-management-context-api--client-crud)
@@ -23,9 +24,10 @@ A full-stack, enterprise-grade healthcare and doctor appointment management plat
   - [Experiment 5: Backend Authentication & Secure Password Management](#experiment-5-backend-authentication--secure-password-management)
   - [Experiment 6: Role-Based Access Control (RBAC) & Protected Routes](#experiment-6-role-based-access-control-rbac--protected-routes)
   - [Experiment 7: Multi-Container Dockerization & Docker Compose](#experiment-7-multi-container-dockerization--docker-compose)
+  - [Experiment 8: Real-Time Communication with WebSockets (Socket.IO)](#experiment-8-real-time-communication-with-websockets-socketio)
 - [System Architecture & Tech Stack](#-system-architecture--tech-stack)
 - [Project Directory Structure](#-project-directory-structure)
-- [API Reference](#-api-reference)
+- [API & WebSocket Reference](#-api--websocket-reference)
 - [Demo Credentials](#-demo-credentials)
 - [Getting Started](#-getting-started)
   - [Option A: Running with Docker Compose (Recommended)](#option-a-running-with-docker-compose-recommended)
@@ -41,10 +43,11 @@ A full-stack, enterprise-grade healthcare and doctor appointment management plat
 - Real-time appointment scheduling with automated slot allocation and status tracking.
 - Role-segregated portals: dedicated dashboards for patients to manage bookings and for doctors to review clinical schedules and update appointment statuses.
 - Enterprise security with token-based stateless authentication, bcrypt password hashing, and strict role authorization.
+- Real-time bidirectional WebSocket communication: live appointment status toasts, instant dashboard synchronization with zero page reload, and private doctor-patient consultations.
 
 ---
 
-## 🔬 Comprehensive Experiments Roadmap (Exp 1 - 7)
+## 🔬 Comprehensive Experiments Roadmap (Exp 1 - 8)
 
 | Experiment | Focus Area | Key Deliverables & Achievements |
 | :--- | :--- | :--- |
@@ -55,6 +58,7 @@ A full-stack, enterprise-grade healthcare and doctor appointment management plat
 | **EXP-5** | **Authentication & Security** | Patient registration & login, password hashing with `bcryptjs`, stateless JWT authentication, JWT verification middleware (`protect`), auth test suite. |
 | **EXP-6** | **Role-Based Access Control (RBAC)** | Multi-role authorization (`patient` vs `doctor`), endpoint security (`authorize`), scoped appointment queries, frontend `ProtectedRoute` wrapper. |
 | **EXP-7** | **Containerization & Orchestration** | Multi-container Docker deployment (`Dockerfile` for backend & frontend), unified `compose.yaml`, isolated bridge network, port bindings (3000 & 5000). |
+| **EXP-8** | **WebSockets & Real-Time Chat** | Integrated Socket.IO, JWT handshake auth, real-time appointment notifications, live dashboard sync with no reload, private chat (`Message` schema, pair validation), notification bell & badge. |
 
 ---
 
@@ -127,7 +131,7 @@ A full-stack, enterprise-grade healthcare and doctor appointment management plat
   - Developed `ProtectedRoute.jsx` component for React Router:
     - Unauthenticated requests redirect to `/login`.
     - Authenticated users with invalid roles are blocked with an "Access Denied" view.
-  - Verified security via the 17-point automated test suite covering cross-role and unauthorized scenarios.
+  - Verified security via the 22-point automated test suite covering cross-role and unauthorized scenarios.
 
 ### Experiment 7: Multi-Container Dockerization & Docker Compose
 - **Objective:** Package the entire multi-tier system into portable, reproducible container images orchestrated via Docker Compose.
@@ -142,7 +146,31 @@ A full-stack, enterprise-grade healthcare and doctor appointment management plat
     - Multi-container orchestration managing service dependencies (`depends_on`).
     - Environment propagation linking frontend API requests directly to the backend container.
   - Optimized `.dockerignore` for both environments to exclude extraneous node modules, git objects, and local logs.
-  - Resolved containerized authentication race conditions to ensure smooth startup.
+
+### Experiment 8: Real-Time Communication with WebSockets (Socket.IO)
+- **Objective:** Enable instantaneous bidirectional event streaming, live notifications, real-time dashboard state synchronization without page reloads, and secure role-restricted private chat.
+- **Implementations:**
+  - **Backend WebSocket Server:**
+    - Integrated **Socket.IO** wrapped around HTTP server in `server.js` listening on `0.0.0.0:5000`.
+    - CORS configured for frontend origins (`http://localhost:3000` and `http://localhost:5173`).
+    - Socket authentication via `io.use()` handshake middleware verifying JWT and joining personal rooms (`socket.join(userId)`).
+    - Connection logging: `"A user connected: <socket.id>"` and `"A user disconnected"`.
+  - **Real-Time Appointment Notifications:**
+    - App set `io` accessible in appointment routes (`app.set("io", io)`).
+    - Emits `appointmentCreated` to doctor room upon patient booking.
+    - Emits `appointmentUpdated` to patient room on doctor confirmation.
+    - Emits `appointmentUpdated` to the opposite party upon appointment cancellation.
+  - **Private Chat Architecture:**
+    - Created `backend/models/Message.js`: Indexed on `(from, to, createdAt)`.
+    - REST endpoints: `GET /api/chat/contacts` (all users except caller) and `GET /api/chat/:otherUserId` (chronological message history).
+    - Socket event `privateMessage`: validates recipient, sender identity enforced via `socket.user`, role pair check (allows doctor-doctor, doctor-patient, patient-doctor; blocks patient-patient), saving to DB and emitting only to sender and recipient rooms.
+  - **Frontend Real-Time Client (`frontend/src/context/SocketContext.jsx` & `Chat.jsx`):**
+    - `SocketContext` managing lifecycle, connection status, global toasts, and unread counters.
+    - Dynamic toasts on incoming booking, confirmation, and cancellation events.
+    - Notification bell with unread badge in Navbar.
+    - Live `AppointmentContext` cache updating without page reloads.
+    - Dedicated `Chat.jsx` page (`/chat`) with contacts search, conversation thread, auto-scrolling, Enter-to-send, and conversation persistence across page reloads.
+  - Verified with 16-point automated WebSocket and chat test suite (`test_exp8.js`).
 
 ---
 
@@ -152,27 +180,29 @@ A full-stack, enterprise-grade healthcare and doctor appointment management plat
 ┌────────────────────────────────────────────────────────┐
 │                   Client Browser                       │
 │              http://localhost:3000                     │
-└───────────────────────────┬────────────────────────────┘
-                            │
-               HTTP / JSON  │  REST API Calls
-                            ▼
+└──────────────┬──────────────────────────┬──────────────┘
+               │                          │
+  HTTP / REST  │ API Calls                │ WebSockets (Socket.IO)
+               │ (Axios)                  │ Bidirectional Events
+               ▼                          ▼
 ┌────────────────────────────────────────────────────────┐
 │               Dockerized Frontend (Vite)               │
-│        React 19 • Tailwind CSS • Axios • Context       │
+│     React 19 • Tailwind CSS • SocketContext • Context  │
 └───────────────────────────┬────────────────────────────┘
                             │
-               Bearer JWT   │  API Requests (Port 5000)
+               Bearer JWT   │  API Requests & Socket Handshake
                             ▼
 ┌────────────────────────────────────────────────────────┐
 │              Dockerized Backend (Express)              │
-│       Node.js • JWT Middleware • RBAC • Helmet         │
+│       Node.js • Socket.IO • JWT • RBAC • Helmet        │
 └───────────────────────────┬────────────────────────────┘
                             │
                Mongoose ORM │  Port 27017 / Cloud URI
                             ▼
 ┌────────────────────────────────────────────────────────┐
 │                    MongoDB Database                    │
-│          Collections: Doctors, Patients, Appointments  │
+│      Collections: Doctors, Patients, Appointments,     │
+│                   Messages                             │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -180,11 +210,12 @@ A full-stack, enterprise-grade healthcare and doctor appointment management plat
 
 | Tier | Technologies |
 | :--- | :--- |
-| **Frontend** | React 19, Vite 8, React Router DOM 7, Tailwind CSS 3.4, Axios, Context API |
-| **Backend** | Node.js, Express 5, Mongoose 9, jsonwebtoken, bcryptjs, express-validator |
-| **Security** | Helmet HTTP headers, express-rate-limit, Role-Based Access Control (RBAC), JWT Bearer Auth |
-| **Database** | MongoDB (NoSQL Database), Mongoose Schemas & Population |
-| **DevOps** | Docker, Docker Compose, Multi-stage Dockerfiles, Alpine Linux |
+| **Frontend** | React 19, Vite 8, React Router DOM 7, Tailwind CSS 3.4, Socket.io-client 4.8, Axios, Context API |
+| **Backend** | Node.js, Express 5, Socket.io 4.8, Mongoose 9, jsonwebtoken, bcryptjs, express-validator |
+| **Real-Time** | WebSockets (Socket.IO), Handshake JWT Auth, Targeted Room Emissions, Bidirectional Messaging |
+| **Security** | Helmet headers, express-rate-limit, Role-Based Access Control (RBAC), JWT Bearer Auth |
+| **Database** | MongoDB (NoSQL Database), Mongoose Schemas & Indexing |
+| **DevOps** | Docker, Docker Compose, Volume Mounts, Alpine Linux |
 
 ---
 
@@ -195,13 +226,14 @@ Medicare system/
 ├── compose.yaml                # Docker Compose multi-container configuration
 ├── README.md                   # Comprehensive project documentation
 │
-├── backend/                    # Express & Node.js API Service
+├── backend/                    # Express & Node.js API & Socket.IO Service
 │   ├── controllers/            # Request handlers (authController, etc.)
 │   ├── middleware/             # Security & RBAC middleware (authMiddleware)
-│   ├── models/                 # Mongoose schemas (Doctor, Patient, Appointment)
+│   ├── models/                 # Mongoose schemas (Doctor, Patient, Appointment, Message)
 │   ├── routes/                 # Express route definitions
 │   │   ├── appointmentRoutes.js
 │   │   ├── authRoutes.js
+│   │   ├── chatRoutes.js
 │   │   ├── doctorRoutes.js
 │   │   └── userRoutes.js
 │   ├── .dockerignore           # Files excluded from backend image
@@ -209,17 +241,18 @@ Medicare system/
 │   ├── Dockerfile              # Backend container recipe
 │   ├── package.json            # Backend dependencies & scripts
 │   ├── seed.js                 # Database seeder with sample accounts
-│   ├── server.js               # Express application entrypoint
-│   └── test_auth.js            # Automated security & RBAC test suite
+│   ├── server.js               # Express & Socket.io server entrypoint
+│   ├── test_auth.js            # Automated security & RBAC test suite
+│   └── test_exp8.js            # Automated Socket.IO & chat test suite
 │
 └── frontend/                   # Vite & React Client Application
     ├── public/                 # Static assets & icons
     ├── src/
     │   ├── api/                # Axios instance & interceptors
-    │   ├── components/         # Reusable UI components & ProtectedRoute
-    │   ├── context/            # AuthContext, AppointmentContext, ThemeContext
+    │   ├── components/         # Reusable UI components, Navbar, ProtectedRoute
+    │   ├── context/            # AuthContext, SocketContext, AppointmentContext, ThemeContext
     │   ├── hooks/              # Custom hooks (useFetch, useForm, useDebounce)
-    │   ├── pages/              # Home, Doctors, Dashboards, Auth pages
+    │   ├── pages/              # Home, Doctors, Dashboards, Chat, Auth pages
     │   ├── App.jsx             # Route definitions & layout wrappers
     │   ├── index.css           # Tailwind CSS directives & global styling
     │   └── main.jsx            # React root mount
@@ -232,7 +265,7 @@ Medicare system/
 
 ---
 
-## 🔌 API Reference
+## 🔌 API & WebSocket Reference
 
 ### Authentication Endpoints (`/api/auth`)
 | Method | Endpoint | Access | Description |
@@ -246,26 +279,26 @@ Medicare system/
 ### Appointments Endpoints (`/api/appointments`)
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/appointments` | Patient Only | Schedule a new appointment |
+| `POST` | `/api/appointments` | Patient Only | Schedule a new appointment (emits `appointmentCreated`) |
 | `GET` | `/api/appointments` | Authenticated | Retrieve role-scoped appointments |
 | `GET` | `/api/appointments/:id` | Authenticated | Retrieve single appointment (patient/doctor only) |
-| `PATCH` | `/api/appointments/:id` | Doctor / Patient | Update status (`Confirmed`, `Cancelled`) |
-| `DELETE` | `/api/appointments/:id` | Authenticated | Delete or cancel an appointment |
+| `PATCH` | `/api/appointments/:id/confirm` | Doctor Only | Confirm appointment (emits `appointmentUpdated`) |
+| `PATCH` | `/api/appointments/:id/cancel` | Doctor / Patient | Cancel appointment (emits `appointmentUpdated`) |
+| `DELETE` | `/api/appointments/:id` | Doctor Only | Delete an appointment record |
 
-### Doctors Endpoints (`/api/doctors`)
+### Real-Time Chat Endpoints (`/api/chat`)
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/doctors` | Public | List all available doctors (supports `?email=` filter) |
-| `GET` | `/api/doctors/:id` | Public | Get doctor details by ID |
-| `POST` | `/api/doctors` | Public / Admin | Create a new doctor profile |
-| `PUT` | `/api/doctors/:id` | Public / Admin | Update doctor profile details |
+| `GET` | `/api/chat/contacts` | Authenticated | List all users except caller `{ _id, name, role }` |
+| `GET` | `/api/chat/:otherUserId` | Authenticated | Retrieve chronological chat messages between users |
 
-### RBAC Test Area (`/api/user`)
-| Method | Endpoint | Access | Description |
+### Socket.IO WebSocket Events
+| Event Name | Direction | Payload | Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/user/dashboard` | Any logged-in user | Validates basic JWT authentication |
-| `GET` | `/api/user/patient-area` | Patient Only | Validates patient role authorization |
-| `GET` | `/api/user/doctor-area` | Doctor Only | Validates doctor role authorization |
+| `appointmentCreated` | Server $\rightarrow$ Client | Populated Appointment | Sent to doctor's room on booking |
+| `appointmentUpdated` | Server $\rightarrow$ Client | Populated Appointment | Sent to opposite party on confirm/cancel |
+| `privateMessage` | Client $\rightarrow$ Server | `{ to, text }` | Client sends message to recipient |
+| `privateMessage` | Server $\rightarrow$ Client | `{ _id, from, to, text, senderName, createdAt }` | Delivered only to sender and recipient |
 
 ---
 
@@ -275,9 +308,9 @@ Use the following pre-seeded test accounts to explore the system:
 
 | Role | Email | Password | Access Rights |
 | :--- | :--- | :--- | :--- |
-| **Patient** | `john@email.com` | `password123` | Book appointments, view personal appointment history |
-| **Doctor** | `sarah@medicare.com` | `password123` | View assigned appointments, confirm/cancel bookings |
-| **Doctor** | `michael@medicare.com` | `password123` | View assigned appointments, update patient schedule |
+| **Patient** | `john@email.com` | `password123` | Book appointments, live notifications, chat with doctors |
+| **Doctor** | `sarah@medicare.com` | `password123` | View assigned appointments, confirm/cancel, chat with patients and doctors |
+| **Doctor** | `michael@medicare.com` | `password123` | View assigned appointments, live sync, chat |
 
 ---
 
@@ -287,27 +320,21 @@ Use the following pre-seeded test accounts to explore the system:
 
 Run both frontend and backend in isolated containers with a single command:
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/imunmesh/medicare.git
-   cd medicare
-   ```
-
-2. **Launch with Docker Compose:**
+1. **Launch with Docker Compose:**
    ```bash
    docker compose up --build -d
    ```
 
-3. **Verify running containers:**
+2. **Verify running containers:**
    ```bash
    docker compose ps
    ```
 
-4. **Access the application:**
+3. **Access the application:**
    - 🌐 **Frontend UI:** [http://localhost:3000](http://localhost:3000)
-   - 🔌 **Backend API:** [http://localhost:5000/api](http://localhost:5000/api)
+   - 🔌 **Backend API & WebSockets:** [http://localhost:5000](http://localhost:5000)
 
-5. **Stop containers:**
+4. **Stop containers:**
    ```bash
    docker compose down
    ```
@@ -347,17 +374,14 @@ npm run dev
 
 ## 🧪 Running Automated Tests
 
-Run the security and Role-Based Access Control (RBAC) test suite:
+Run the security, RBAC, and WebSocket test suites:
 
 ```bash
 cd backend
-node test_auth.js
-```
 
-This script verifies:
-1. Patient registration and duplicate detection.
-2. Patient and Doctor authentication & JWT generation.
-3. Access to public vs protected endpoints.
-4. Token-less request rejection (`401 Unauthorized`).
-5. Role authorization verification (`403 Forbidden` on role mismatch).
-6. Scoped appointment query permissions for both roles.
+# Run RBAC security tests (22 test assertions)
+node test_auth.js
+
+# Run Experiment 8 Socket.IO & Chat tests (16 test assertions)
+node test_exp8.js
+```

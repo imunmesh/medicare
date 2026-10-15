@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import BookAppointment from './pages/BookAppointment';
 import PatientDashboard from './pages/PatientDashboard';
 import DoctorDashboard from './pages/DoctorDashboard';
+import Chat from './pages/Chat';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -41,6 +42,16 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['doctor']}>
               <DoctorDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected Chat Route */}
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute allowedRoles={['patient', 'doctor']}>
+              <Chat />
             </ProtectedRoute>
           }
         />

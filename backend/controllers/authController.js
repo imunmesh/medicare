@@ -5,8 +5,10 @@ const Patient = require("../models/Patient");
 const Doctor = require("../models/Doctor");
 
 // Helper to generate JWT token
-const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+const generateToken = (id, role, name) => {
+  const payload = { id, role };
+  if (name) payload.name = name;
+  return jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: "1h",
   });
 };
@@ -110,7 +112,7 @@ const loginPatient = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const token = generateToken(patient._id, "patient");
+    const token = generateToken(patient._id, "patient", patient.name);
 
     return res.status(200).json({
       message: "Login successful",
@@ -153,7 +155,7 @@ const loginDoctor = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const token = generateToken(doctor._id, "doctor");
+    const token = generateToken(doctor._id, "doctor", doctor.name);
 
     return res.status(200).json({
       message: "Login successful",

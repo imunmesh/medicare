@@ -12,6 +12,13 @@ router.post("/", protect, authorize("patient"), async (req, res) => {
       patientId: req.user.id,
     };
     const appointment = await Appointment.create(appointmentData);
+
+    // Real-time notification: Patient books -> io.to(doctorId).emit("appointmentCreated", appointment)
+    const io = req.app.get("io");
+    if (io && appointment.doctorId) {
+      io.to(String(appointment.doctorId)).emit("appointmentCreated", appointment);
+    }
+
     res.status(201).json(appointment);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -87,6 +94,27 @@ const handleAppointmentUpdate = async (req, res) => {
       req.body,
       { new: true, runValidators: true }
     );
+
+    // Socket notification
+    const io = req.app.get("io");
+    if (io && updated) {
+      if (updated.status === "confirmed") {
+        io.to(String(updated.patientId)).emit("appointmentUpdated", updated);
+      } else if (updated.status === "cancelled") {
+        const otherPartyId =
+          String(req.user.id) === String(updated.patientId)
+            ? String(updated.doctorId)
+            : String(updated.patientId);
+        io.to(otherPartyId).emit("appointmentUpdated", updated);
+      } else {
+        const otherPartyId =
+          String(req.user.id) === String(updated.patientId)
+            ? String(updated.doctorId)
+            : String(updated.patientId);
+        io.to(otherPartyId).emit("appointmentUpdated", updated);
+      }
+    }
+
     res.status(200).json(updated);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -111,6 +139,13 @@ router.patch("/:id/confirm", protect, authorize("doctor"), async (req, res) => {
     }
     appointment.status = "confirmed";
     await appointment.save();
+
+    // Doctor confirms -> io.to(patientId).emit("appointmentUpdated", appointment)
+    const io = req.app.get("io");
+    if (io && appointment.patientId) {
+      io.to(String(appointment.patientId)).emit("appointmentUpdated", appointment);
+    }
+
     res.status(200).json(appointment);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -128,6 +163,12 @@ router.patch("/:id/complete", protect, authorize("doctor"), async (req, res) => 
     }
     appointment.status = "completed";
     await appointment.save();
+
+    const io = req.app.get("io");
+    if (io && appointment.patientId) {
+      io.to(String(appointment.patientId)).emit("appointmentUpdated", appointment);
+    }
+
     res.status(200).json(appointment);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -147,6 +188,17 @@ router.patch("/:id/cancel", protect, async (req, res) => {
     }
     appointment.status = "cancelled";
     await appointment.save();
+
+    // Cancelled by either side -> emit "appointmentUpdated" to OTHER party's room
+    const io = req.app.get("io");
+    if (io) {
+      const otherPartyId =
+        String(req.user.id) === String(appointment.patientId)
+          ? String(appointment.doctorId)
+          : String(appointment.patientId);
+      io.to(otherPartyId).emit("appointmentUpdated", appointment);
+    }
+
     res.status(200).json(appointment);
   } catch (error) {
     res.status(400).json({ message: error.message });

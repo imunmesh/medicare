@@ -22,6 +22,7 @@ export const AuthProvider = ({ children }) => {
     const handleAuthExpired = () => {
       setUser(null);
       setToken(null);
+      localStorage.removeItem('activeChatContact');
     };
 
     window.addEventListener('auth:expired', handleAuthExpired);
@@ -44,6 +45,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem('user');
     localStorage.removeItem('authToken');
+    localStorage.removeItem('activeChatContact');
   };
 
   return (

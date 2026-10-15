@@ -1,14 +1,55 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import { useAuth } from './AuthContext';
+import { useSocket } from './SocketContext';
 
 const AppointmentContext = createContext(null);
 
 export const AppointmentProvider = ({ children }) => {
   const { token } = useAuth();
+  const { socket } = useSocket();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Listen for real-time live appointment updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleCreated = (newAppointment) => {
+      setAppointments((prev) => {
+        const newId = String(newAppointment._id || newAppointment.id);
+        const exists = prev.some((item) => String(item._id || item.id) === newId);
+        if (exists) {
+          return prev.map((item) =>
+            String(item._id || item.id) === newId ? newAppointment : item
+          );
+        }
+        return [newAppointment, ...prev];
+      });
+    };
+
+    const handleUpdated = (updatedAppointment) => {
+      setAppointments((prev) => {
+        const updateId = String(updatedAppointment._id || updatedAppointment.id);
+        const exists = prev.some((item) => String(item._id || item.id) === updateId);
+        if (exists) {
+          return prev.map((item) =>
+            String(item._id || item.id) === updateId ? updatedAppointment : item
+          );
+        }
+        return [updatedAppointment, ...prev];
+      });
+    };
+
+    socket.on('appointmentCreated', handleCreated);
+    socket.on('appointmentUpdated', handleUpdated);
+
+    return () => {
+      socket.off('appointmentCreated', handleCreated);
+      socket.off('appointmentUpdated', handleUpdated);
+    };
+  }, [socket]);
 
   // Fetch appointments only when authenticated
   useEffect(() => {
