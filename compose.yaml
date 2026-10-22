@@ -1,6 +1,9 @@
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medicare-backend
     ports:
       - "5000:5000"
     env_file:
@@ -8,12 +11,16 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
       args:
         - VITE_API_URL=http://localhost:5000/api
         - VITE_SOCKET_URL=http://localhost:5000
+    container_name: medicare-frontend
     ports:
       - "3000:3000"
     environment:
@@ -24,3 +31,4 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+    restart: unless-stopped
