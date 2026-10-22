@@ -21,17 +21,45 @@ const Message = require("./models/Message");
 const app = express();
 const server = http.createServer(app);
 
+// Dynamic CORS configuration for local development & Vercel production
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
+];
+
+if (process.env.CLIENT_URL) {
+  process.env.CLIENT_URL.split(",")
+    .map((url) => url.trim().replace(/\/$/, ""))
+    .forEach((url) => {
+      if (url && !allowedOrigins.includes(url)) {
+        allowedOrigins.push(url);
+      }
+    });
+}
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  if (/^https?:\/\/.*\.vercel\.app$/.test(origin)) return true;
+  return false;
+};
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (isOriginAllowed(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    }
+  },
+  credentials: true,
+};
+
 // Initialize Socket.io
 const io = new Server(server, {
-  cors: {
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:3000",
-      "http://127.0.0.1:5173",
-      "http://127.0.0.1:3000",
-    ],
-    credentials: true,
-  },
+  cors: corsOptions,
 });
 
 // Socket Authentication Middleware
@@ -171,17 +199,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Standard Middleware
-app.use(
-  cors({
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:5173",
-      "http://127.0.0.1:3000",
-      "http://127.0.0.1:5173",
-    ],
-    credentials: true,
-  })
-);
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // MongoDB Connection
