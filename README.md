@@ -18,7 +18,7 @@ A full-stack, enterprise-grade healthcare and doctor appointment management plat
 - [Project Overview](#-project-overview)
 - [Comprehensive Experiments Roadmap (Exp 1 - 8)](#-comprehensive-experiments-roadmap-exp-1---8)
   - [Experiment 1: Frontend Initialization & UI Component Architecture](#experiment-1-frontend-initialization--ui-component-architecture)
-  - [Experiment 2: React Hooks, Dynamic State & Mock REST API](#experiment-2-react-hooks-dynamic-state--mock-rest-api)
+  - [Experiment 2: React Hooks, Dynamic State & REST API Integration](#experiment-2-react-hooks-dynamic-state--rest-api-integration)
   - [Experiment 3: Centralized State Management (Context API) & Client CRUD](#experiment-3-centralized-state-management-context-api--client-crud)
   - [Experiment 4: Full-Stack Architecture - Express API & MongoDB Integration](#experiment-4-full-stack-architecture---express-api--mongodb-integration)
   - [Experiment 5: Backend Authentication & Secure Password Management](#experiment-5-backend-authentication--secure-password-management)
@@ -52,9 +52,9 @@ A full-stack, enterprise-grade healthcare and doctor appointment management plat
 | Experiment | Focus Area | Key Deliverables & Achievements |
 | :--- | :--- | :--- |
 | **EXP-1** | **UI Architecture & Layouts** | Vite + React frontend, Tailwind CSS design system, modular UI components (`Navbar`, `Footer`, `Button`, `Card`, `Modal`), responsive dashboards. |
-| **EXP-2** | **Hooks & Mock API Integration** | Custom hooks (`useFetch`, `useForm`, `useDebounce`), dynamic form validation, `ThemeContext` (Dark/Light mode), JSON-server mock API. |
+| **EXP-2** | **Hooks & API Integration** | Custom hooks (`useFetch`, `useForm`, `useDebounce`), dynamic form validation, `ThemeContext` (Dark/Light mode), REST API integration. |
 | **EXP-3** | **Context State & Client CRUD** | Centralized `AppointmentContext`, full client-side CRUD operations (Book, Confirm, Cancel), authentication UI guards. |
-| **EXP-4** | **Decoupled Backend & Database** | Full-stack separation (`frontend/` & `backend/`), Express REST API, MongoDB connection via Mongoose, schemas (`Doctor`, `Appointment`), database seed script. |
+| **EXP-4** | **Decoupled Backend & Database** | Full-stack separation (`frontend/` & `backend/`), Express REST API, MongoDB connection via Mongoose, schemas (`Doctor`, `Appointment`). |
 | **EXP-5** | **Authentication & Security** | Patient registration & login, password hashing with `bcryptjs`, stateless JWT authentication, JWT verification middleware (`protect`), auth test suite. |
 | **EXP-6** | **Role-Based Access Control (RBAC)** | Multi-role authorization (`patient` vs `doctor`), endpoint security (`authorize`), scoped appointment queries, frontend `ProtectedRoute` wrapper. |
 | **EXP-7** | **Containerization & Orchestration** | Multi-container Docker deployment (`Dockerfile` for backend & frontend), unified `compose.yaml`, isolated bridge network, port bindings (3000 & 5000). |
@@ -73,7 +73,7 @@ A full-stack, enterprise-grade healthcare and doctor appointment management plat
     - `PatientDashboard.jsx`: Upcoming appointments, past medical consults, and status indicators.
     - `Login.jsx`: Responsive authentication UI layout.
 
-### Experiment 2: React Hooks, Dynamic State & Mock REST API
+### Experiment 2: React Hooks, Dynamic State & REST API Integration
 - **Objective:** Introduce advanced React patterns, reusable custom hooks, client-side validation, and asynchronous data fetching.
 - **Implementations:**
   - Created reusable custom React hooks:
@@ -84,7 +84,7 @@ A full-stack, enterprise-grade healthcare and doctor appointment management plat
     - `AuthContext.jsx`: User session and login state.
     - `ThemeContext.jsx`: Dark mode / light mode toggle with theme persistence.
   - Built dedicated `Doctors.jsx` directory with live specialty filtering and real-time availability filters.
-  - Connected frontend to `json-server` (`db.json`) via Axios instance for mock CRUD testing.
+  - Connected frontend to API endpoints via Axios instance with structured error handling.
 
 ### Experiment 3: Centralized State Management (Context API) & Client CRUD
 - **Objective:** Eliminate prop drilling, coordinate global booking workflows, and enforce client-side navigation guards.
@@ -98,7 +98,7 @@ A full-stack, enterprise-grade healthcare and doctor appointment management plat
   - Synchronized real-time status updates across patient and doctor views.
 
 ### Experiment 4: Full-Stack Architecture - Express API & MongoDB Integration
-- **Objective:** Transition from mock APIs to an enterprise decoupled full-stack architecture with persistent NoSQL storage.
+- **Objective:** Establish an enterprise decoupled full-stack architecture with persistent NoSQL storage.
 - **Implementations:**
   - Restructured repository into standalone `frontend/` and `backend/` micro-packages.
   - Engineered **Node.js** & **Express** REST API server:
@@ -107,7 +107,7 @@ A full-stack, enterprise-grade healthcare and doctor appointment management plat
   - Integrated **MongoDB** using **Mongoose ORM**:
     - `Doctor` model: Name, email, specialization, experience, fees, availability, rating.
     - `Appointment` model: References to patient and doctor IDs, date, time slot, symptoms, and appointment status.
-  - Created database seeder (`seed.js`) generating realistic sample doctors and default data records.
+  - Designed schema models for Doctors and Appointments with MongoDB Atlas persistence.
 
 ### Experiment 5: Backend Authentication & Secure Password Management
 - **Objective:** Implement cryptographic security, user registration, credential authentication, and stateless token authorization.
@@ -240,7 +240,6 @@ Medicare system/
 │   ├── .env                    # Backend environment config
 │   ├── Dockerfile              # Backend container recipe
 │   ├── package.json            # Backend dependencies & scripts
-│   ├── seed.js                 # Database seeder with sample accounts
 │   ├── server.js               # Express & Socket.io server entrypoint
 │   ├── test_auth.js            # Automated security & RBAC test suite
 │   └── test_exp8.js            # Automated Socket.IO & chat test suite
@@ -302,15 +301,12 @@ Medicare system/
 
 ---
 
-## 🔑 Demo Credentials
+## 👤 User Registration & Roles
 
-Use the following pre-seeded test accounts to explore the system:
+MediCare uses real MongoDB storage with JWT authentication. You can create accounts directly via the Registration page:
 
-| Role | Email | Password | Access Rights |
-| :--- | :--- | :--- | :--- |
-| **Patient** | `john@email.com` | `password123` | Book appointments, live notifications, chat with doctors |
-| **Doctor** | `sarah@medicare.com` | `password123` | View assigned appointments, confirm/cancel, chat with patients and doctors |
-| **Doctor** | `michael@medicare.com` | `password123` | View assigned appointments, live sync, chat |
+- **Patient:** Click **Register** on the navbar or login screen, select **Patient**, and provide your name, email, phone, and password. Once registered, book appointments, receive real-time notifications, and chat with doctors.
+- **Doctor:** Select **Doctor** on the registration screen, enter your name, email, phone, password, and specialization (e.g. *Cardiologist*, *Neurologist*, *Pediatrician*). Once registered, your profile immediately appears on the Doctors list and Home page for patients to book visits.
 
 ---
 
@@ -350,9 +346,6 @@ cd backend
 
 # Install dependencies
 npm install
-
-# Seed the database with sample data & users
-npm run seed
 
 # Start the backend server (runs on http://localhost:5000)
 npm run dev

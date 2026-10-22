@@ -160,6 +160,38 @@ const BookAppointment = () => {
     );
   }
 
+  if (!doctors || doctors.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center p-4">
+          <div className="card-base max-w-md w-full text-center p-8 shadow-xl">
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              No Doctors Available Yet
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
+              There are currently no doctors registered on the platform to accept appointments. Please check back later.
+            </p>
+            <div className="space-y-3">
+              <Button onClick={() => navigate('/patient-dashboard')} className="w-full">
+                Go to Dashboard
+              </Button>
+              <Button variant="secondary" onClick={() => navigate('/')} className="w-full">
+                Back to Home
+              </Button>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />

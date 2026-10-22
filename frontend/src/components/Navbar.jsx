@@ -8,7 +8,7 @@ import { useSocket } from '../context/SocketContext';
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const { user, login, logout } = useAuth();
+  const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const { getAppointmentsForPatient, getAppointmentsForDoctor } = useAppointments();
   const {
@@ -25,26 +25,6 @@ const Navbar = () => {
     navigate('/');
   };
 
-  const handleRoleSwitch = () => {
-    if (user?.role === 'patient') {
-      login({
-        id: '1',
-        name: 'Dr. Sarah Johnson',
-        email: 'sarah@medicare.com',
-        role: 'doctor',
-        specialization: 'Cardiologist',
-      });
-      navigate('/doctor-dashboard');
-    } else {
-      login({
-        id: '1',
-        name: 'John Doe',
-        email: 'john@email.com',
-        role: 'patient',
-      });
-      navigate('/patient-dashboard');
-    }
-  };
 
   // Compute appointment badge count based on user role
   let badgeCount = 0;
@@ -207,14 +187,6 @@ const Navbar = () => {
                   )}
                 </Link>
 
-                {/* Role switcher for quick testing and live lab demonstration */}
-                <button
-                  onClick={handleRoleSwitch}
-                  className="text-xs px-2.5 py-1 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  title="Switch role in-memory without refreshing"
-                >
-                  Switch to {user.role === 'patient' ? 'Doctor' : 'Patient'}
-                </button>
 
                 <button
                   onClick={handleLogout}
@@ -311,15 +283,6 @@ const Navbar = () => {
                     </span>
                   )}
                 </Link>
-                <button
-                  onClick={() => {
-                    handleRoleSwitch();
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-gray-700 transition-colors duration-200 text-sm"
-                >
-                  Switch to {user.role === 'patient' ? 'Doctor View' : 'Patient View'}
-                </button>
                 <button
                   onClick={() => {
                     handleLogout();

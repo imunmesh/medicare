@@ -133,8 +133,8 @@ function LoginButton() {
   const handleLogin = () => {
     const userData = {
       id: 1,
-      name: 'John Doe',
-      email: 'john@example.com',
+      name: 'Patient User',
+      email: 'patient@example.com',
       role: 'patient',
       token: 'fake-jwt-token',
     };

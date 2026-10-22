@@ -92,6 +92,16 @@ const Doctors = () => {
               <p className="text-red-500 text-lg mb-4">Error loading doctors: {error}</p>
               <Button onClick={() => window.location.reload()}>Retry</Button>
             </div>
+          ) : !doctors || doctors.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">No doctors available yet</h3>
+              <p className="text-gray-600 dark:text-gray-400">Please check back later as new healthcare professionals join our platform.</p>
+            </div>
           ) : filteredDoctors.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-600 dark:text-gray-400">No doctors found matching your search.</p>
@@ -101,7 +111,7 @@ const Doctors = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredDoctors.map((doctor) => (
                   <DoctorCard 
-                    key={doctor.id} 
+                    key={doctor.id || doctor._id} 
                     doctor={doctor} 
                     onViewProfile={handleViewProfile}
                   />
@@ -127,7 +137,7 @@ const Doctors = () => {
           <div className="text-center">
             <div className="w-24 h-24 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-3xl font-bold text-white">
-                {selectedDoctor.name.split(' ').map(n => n[0]).join('')}
+                {selectedDoctor.name ? selectedDoctor.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2) : 'DR'}
               </span>
             </div>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
@@ -150,7 +160,7 @@ const Doctors = () => {
               </div>
             </div>
 
-            <Link to="/login">
+            <Link to={`/book-appointment?doctorId=${selectedDoctor.id || selectedDoctor._id}`}>
               <Button className="w-full">Book Appointment</Button>
             </Link>
           </div>

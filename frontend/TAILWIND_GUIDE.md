@@ -431,7 +431,7 @@ export default Card;
 // Card with all props
 <Card
   image="/doctor-photo.jpg"
-  title="Dr. Sarah Johnson"
+  title="Dr. Specialist"
   description="Cardiologist with 15 years of experience"
   hoverable
   footer={
@@ -578,7 +578,7 @@ function App() {
       >
         <p>Are you sure you want to book this appointment?</p>
         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <p><strong>Doctor:</strong> Dr. Sarah Johnson</p>
+          <p><strong>Doctor:</strong> Dr. Specialist</p>
           <p><strong>Date:</strong> March 15, 2024</p>
           <p><strong>Time:</strong> 10:00 AM</p>
         </div>

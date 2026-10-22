@@ -41,19 +41,10 @@ const Login = () => {
     return errors;
   };
 
-  const { values, errors, touched, handleChange, handleBlur, validateForm, setValues } = useForm(
+  const { values, errors, touched, handleChange, handleBlur, validateForm } = useForm(
     { email: '', password: '' },
     validate
   );
-
-  const handleQuickFill = (account) => {
-    setAuthError('');
-    setUserType(account.role);
-    setValues({
-      email: account.email,
-      password: 'password123',
-    });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -187,38 +178,6 @@ const Login = () => {
               </Button>
             </form>
 
-            {/* Quick Demo Logins */}
-            <div className="mt-6 pt-5 border-t border-gray-200 dark:border-gray-700">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2.5 text-center">
-                Quick Demo Logins (JWT Authenticated)
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill({ email: 'sarah@medicare.com', role: 'doctor' })}
-                  className="p-2 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-left border border-blue-200 dark:border-blue-800 transition-colors"
-                >
-                  <span className="font-semibold block">Dr. Sarah Johnson</span>
-                  <span className="text-[11px] opacity-80">sarah@medicare.com</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill({ email: 'michael@medicare.com', role: 'doctor' })}
-                  className="p-2 rounded bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-left border border-purple-200 dark:border-purple-800 transition-colors"
-                >
-                  <span className="font-semibold block">Dr. Michael Chen</span>
-                  <span className="text-[11px] opacity-80">michael@medicare.com</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill({ email: 'john@email.com', role: 'patient' })}
-                  className="p-2 rounded bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-left border border-emerald-200 dark:border-emerald-800 transition-colors sm:col-span-2"
-                >
-                  <span className="font-semibold block">John Doe (Patient)</span>
-                  <span className="text-[11px] opacity-80">john@email.com</span>
-                </button>
-              </div>
-            </div>
 
             <div className="mt-6 text-center">
               <p className="text-gray-600 dark:text-gray-400">
