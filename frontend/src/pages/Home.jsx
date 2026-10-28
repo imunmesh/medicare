@@ -218,9 +218,17 @@ const Home = () => {
             <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               {selectedDoctor.name}
             </h3>
-            <p className="text-primary-600 dark:text-primary-400 font-medium text-lg mb-4">
+            <p className="text-primary-600 dark:text-primary-400 font-medium text-lg mb-2">
               {selectedDoctor.specialization}
             </p>
+
+            <div className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mb-4 ${
+              selectedDoctor.available 
+                ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+            }`}>
+              {selectedDoctor.available ? 'Available for Appointments' : 'Not Available'}
+            </div>
             
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
               <div className="grid grid-cols-2 gap-4 text-left">
@@ -235,9 +243,15 @@ const Home = () => {
               </div>
             </div>
 
-            <Link to={`/book-appointment?doctorId=${selectedDoctor.id || selectedDoctor._id}`}>
-              <Button className="w-full">Book Appointment</Button>
-            </Link>
+            {selectedDoctor.available ? (
+              <Link to={`/book-appointment?doctorId=${selectedDoctor.id || selectedDoctor._id}`}>
+                <Button className="w-full">Book Appointment</Button>
+              </Link>
+            ) : (
+              <Button disabled className="w-full opacity-60 cursor-not-allowed">
+                Not Available for Booking
+              </Button>
+            )}
           </div>
         )}
       </Modal>

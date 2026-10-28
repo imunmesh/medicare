@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAppointments } from '../context/AppointmentContext';
+import axiosInstance from '../api/axiosInstance';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Card from '../components/Card';
@@ -17,14 +18,75 @@ const sortOptions = [
 
 const DoctorDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { getAppointmentsForDoctor, confirmAppointment, cancelAppointment, loading, error } = useAppointments();
   const appointments = user?.id ? getAppointmentsForDoctor(user.id) : [];
   const [sortBy, setSortBy] = useState('time-asc');
-  const [isAvailable, setIsAvailable] = useState(true);
+  const [isAvailable, setIsAvailable] = useState(
+    user?.available !== undefined ? user.available : true
+  );
+  const [updatingAvailability, setUpdatingAvailability] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  // Sync latest availability status from database on mount and after refresh
+  useEffect(() => {
+    let isMounted = true;
+    if (!user?.id || user.role !== 'doctor') return;
+
+    const syncAvailability = async () => {
+      try {
+        const res = await axiosInstance.get(`/doctors/${user.id}`);
+        if (isMounted && res.data && res.data.available !== undefined) {
+          setIsAvailable(res.data.available);
+          if (user.available !== res.data.available) {
+            updateUser({ ...user, available: res.data.available });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to sync doctor availability:', err);
+      }
+    };
+
+    syncAvailability();
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
+
+  const handleToggleAvailability = async () => {
+    if (updatingAvailability || !user?.id) return;
+    const newStatus = !isAvailable;
+    setUpdatingAvailability(true);
+
+    try {
+      const res = await axiosInstance.patch(`/doctors/${user.id}`, {
+        available: newStatus,
+      });
+
+      const finalStatus =
+        res.data && res.data.available !== undefined ? res.data.available : newStatus;
+
+      setIsAvailable(finalStatus);
+      updateUser({ ...user, available: finalStatus });
+
+      setMessage({
+        type: 'success',
+        text: `You are now marked as ${finalStatus ? 'Available' : 'Unavailable'} for appointments.`,
+      });
+      setTimeout(() => setMessage({ type: '', text: '' }), 4000);
+    } catch (err) {
+      console.error('Failed to update doctor availability:', err);
+      setMessage({
+        type: 'error',
+        text: err.response?.data?.message || 'Failed to update availability. Please try again.',
+      });
+      setTimeout(() => setMessage({ type: '', text: '' }), 4000);
+    } finally {
+      setUpdatingAvailability(false);
+    }
+  };
 
   const handleSort = (value) => {
     setSortBy(value);
@@ -189,8 +251,12 @@ const DoctorDashboard = () => {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Availability</span>
                       <button
-                        onClick={() => setIsAvailable(!isAvailable)}
+                        type="button"
+                        onClick={handleToggleAvailability}
+                        disabled={updatingAvailability}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
+                          updatingAvailability ? 'opacity-50 cursor-wait' : 'cursor-pointer'
+                        } ${
                           isAvailable ? 'bg-green-500' : 'bg-gray-300'
                         }`}
                       >
@@ -202,7 +268,7 @@ const DoctorDashboard = () => {
                       </button>
                     </div>
                     <span className={`text-sm font-medium ${isAvailable ? 'text-green-600' : 'text-gray-500'}`}>
-                      {isAvailable ? 'Available' : 'Unavailable'}
+                      {updatingAvailability ? 'Updating...' : isAvailable ? 'Available' : 'Unavailable'}
                     </span>
                   </div>
 

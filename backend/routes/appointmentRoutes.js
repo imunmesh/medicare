@@ -1,15 +1,39 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
 const Appointment = require("../models/Appointment");
+const Doctor = require("../models/Doctor");
 const { protect, authorize } = require("../middleware/authMiddleware");
 
 // CREATE — POST /api/appointments (Protected: Patient only)
 // Set patientId from req.user.id (do not trust body)
 router.post("/", protect, authorize("patient"), async (req, res) => {
   try {
+    const { doctorId } = req.body;
+    if (!doctorId) {
+      return res.status(400).json({ message: "Doctor ID is required" });
+    }
+
+    let doctor = null;
+    if (mongoose.Types.ObjectId.isValid(doctorId)) {
+      doctor = await Doctor.findById(doctorId);
+    }
+    if (!doctor) {
+      doctor = await Doctor.findOne({ _id: doctorId });
+    }
+
+    if (doctor && doctor.available === false) {
+      return res.status(400).json({
+        message: "Doctor is currently not available for appointments",
+      });
+    }
+
     const appointmentData = {
       ...req.body,
       patientId: req.user.id,
+      patientName: req.body.patientName || req.user.name || "Patient",
+      doctorName: req.body.doctorName || doctor?.name || "Doctor",
+      specialization: doctor?.specialization || req.body.specialization || "General Physician",
     };
     const appointment = await Appointment.create(appointmentData);
 

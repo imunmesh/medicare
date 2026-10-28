@@ -30,6 +30,14 @@ const BookAppointment = () => {
     
     if (!values.doctorId) {
       errors.doctorId = 'Please select a doctor';
+    } else {
+      const selectedDoc = doctors?.find(
+        (d) => String(d.id || d._id) === String(values.doctorId)
+      );
+      if (selectedDoc && selectedDoc.available === false) {
+        errors.doctorId =
+          'This doctor is currently not available for appointments. Please choose another doctor.';
+      }
     }
     
     if (!values.date) {
@@ -74,6 +82,13 @@ const BookAppointment = () => {
         setSubmitError(null);
 
         const doctor = doctors?.find((d) => String(d.id || d._id) === String(values.doctorId));
+        if (doctor && doctor.available === false) {
+          setSubmitError(
+            'This doctor is currently not available for appointments. Please choose another doctor.'
+          );
+          return;
+        }
+
         const newAppointment = {
           patientId: user.id || user._id,
           patientName: user.name,
@@ -208,6 +223,18 @@ const BookAppointment = () => {
               </p>
             </div>
 
+            {(() => {
+              const selectedDoc = doctors?.find((d) => String(d.id || d._id) === String(values.doctorId));
+              if (selectedDoc && selectedDoc.available === false) {
+                return (
+                  <div className="mb-6 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm">
+                    {selectedDoc.name} is currently not available for appointments. Please choose another doctor.
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -222,8 +249,12 @@ const BookAppointment = () => {
                 >
                   <option value="">Choose a doctor</option>
                   {doctors?.map((doctor) => (
-                    <option key={doctor.id || doctor._id} value={doctor.id || doctor._id}>
-                      {doctor.name} - {doctor.specialization}
+                    <option 
+                      key={doctor.id || doctor._id} 
+                      value={doctor.id || doctor._id}
+                      disabled={doctor.available === false}
+                    >
+                      {doctor.name} - {doctor.specialization} {doctor.available === false ? '(Not Available)' : ''}
                     </option>
                   ))}
                 </select>
@@ -298,7 +329,11 @@ const BookAppointment = () => {
               )}
 
               <div className="flex gap-4">
-                <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                <Button 
+                  type="submit" 
+                  className="flex-1" 
+                  disabled={isSubmitting || doctors?.find((d) => String(d.id || d._id) === String(values.doctorId))?.available === false}
+                >
                   {isSubmitting ? 'Booking...' : 'Book Appointment'}
                 </Button>
                 <Button
